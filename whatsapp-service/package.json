@@ -1,0 +1,19 @@
+{
+  "name": "tigas-whatsapp-service",
+  "version": "1.0.0",
+  "description": "Microservico WhatsApp via Baileys para a plataforma Tigas — sem API key, usa o numero 31971481340 diretamente.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.18",
+    "dotenv": "^17.4.1",
+    "express": "^4.18.3",
+    "pino": "^9.6.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

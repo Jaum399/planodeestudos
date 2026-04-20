@@ -1,0 +1,22 @@
+{
+  "name": "app-tigas-entregas",
+  "version": "1.0.0",
+  "description": "App de mentoria e estudos - entry point para Vercel serverless",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/functions": "^3.4.3",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^7.1.1",
+    "mongoose": "^8.13.2",
+    "nodemailer": "^6.9.13",
+    "stripe": "^22.0.1",
+    "uuid": "^9.0.0"
+  }
+}
