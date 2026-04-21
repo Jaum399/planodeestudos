@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Download, Menu, X } from 'lucide-react';
 import PublicPreferenceControls from './PublicPreferenceControls';
+import { DOWNLOAD_LINKS } from '../services/downloadLinks';
 
 export default function LandingNavbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,6 +31,21 @@ export default function LandingNavbar() {
 
           {/* CTA buttons */}
           <div className="hidden md:flex items-center gap-3">
+            <a
+              href={DOWNLOAD_LINKS.androidApk}
+              download
+              className="btn-secondary text-sm py-2 px-4"
+            >
+              <Download size={14} /> Android
+            </a>
+            <a
+              href={DOWNLOAD_LINKS.iosInstall}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary text-sm py-2 px-4"
+            >
+              <Download size={14} /> iPhone
+            </a>
             <PublicPreferenceControls compact />
             <button onClick={() => navigate('/login')} className="btn-secondary text-sm py-2 px-4">
               Entrar
@@ -55,6 +71,25 @@ export default function LandingNavbar() {
           <a href="#features" className="block nav-link public-nav-link py-2" onClick={() => setIsOpen(false)}>Recursos</a>
           <a href="#pricing" className="block nav-link public-nav-link py-2" onClick={() => setIsOpen(false)}>Preços</a>
           <a href="#testimonials" className="block nav-link public-nav-link py-2" onClick={() => setIsOpen(false)}>Depoimentos</a>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <a
+              href={DOWNLOAD_LINKS.androidApk}
+              download
+              className="btn-secondary text-sm py-2 justify-center"
+              onClick={() => setIsOpen(false)}
+            >
+              <Download size={14} /> Baixar Android
+            </a>
+            <a
+              href={DOWNLOAD_LINKS.iosInstall}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary text-sm py-2 justify-center"
+              onClick={() => setIsOpen(false)}
+            >
+              <Download size={14} /> Instalar no iPhone
+            </a>
+          </div>
           <PublicPreferenceControls compact className="pt-2" />
           <div className="flex gap-3 pt-2">
             <button onClick={() => navigate('/login')} className="btn-secondary text-sm py-2 flex-1 justify-center">

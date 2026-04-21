@@ -33,6 +33,7 @@ const LANG_TO_SPEECH: Record<'pt' | 'en' | 'es' | 'ca', string> = {
 
 export default function JarvisPage() {
   const { user } = useAuth();
+  const assistantName = user?.assistant_name?.trim() || 'Tigas';
   const { language, t } = usePreferences();
   const [messages, setMessages] = useState<JarvisMessage[]>([]);
   const [reminders, setReminders] = useState<JarvisReminder[]>([]);
@@ -89,7 +90,7 @@ export default function JarvisPage() {
         if (hist.length === 0) {
           const greeting: JarvisMessage = {
             role: 'jarvis',
-            content: `Online, ${user?.name?.split(' ')[0] || 'usuario'}. Sou o Tigas, seu assistente de estudos por voz e texto. Modelo atual: ${VOICE_MODEL_LABEL[(data.voiceModel as VoiceModel) || 'tigas_core']}. Pode falar ou digitar.`,
+            content: `Online, ${user?.name?.split(' ')[0] || 'usuario'}. Sou ${assistantName}, seu assistente de estudos por voz e texto. Modelo atual: ${VOICE_MODEL_LABEL[(data.voiceModel as VoiceModel) || 'tigas_core']}. Pode falar ou digitar.`,
             timestamp: new Date().toISOString(),
           };
           setMessages([greeting]);
@@ -100,12 +101,12 @@ export default function JarvisPage() {
       .catch(() => {
         setMessages([{
           role: 'jarvis',
-            content: 'Tigas online. Como posso ajudar seus estudos hoje?',
+            content: `${assistantName} online. Como posso ajudar seus estudos hoje?`,
           timestamp: new Date().toISOString(),
         }]);
       })
       .finally(() => setLoadingState(false));
-  }, [user?.name]);
+  }, [assistantName, user?.name]);
 
   // ── Scroll to bottom ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -265,7 +266,7 @@ export default function JarvisPage() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="w-16 h-16 rounded-full border-2 border-cyan-500/50 border-t-cyan-400 animate-spin mx-auto mb-3" />
-          <p className="text-cyan-400 text-sm">Inicializando Tigas...</p>
+          <p className="text-cyan-400 text-sm">Inicializando {assistantName}...</p>
         </div>
       </div>
     );
@@ -284,7 +285,7 @@ export default function JarvisPage() {
             )}
           </div>
           <div>
-            <h1 className="text-white font-bold">TIGAS</h1>
+            <h1 className="text-white font-bold uppercase">{assistantName}</h1>
             <p className="text-xs text-cyan-500/70">
               {speaking ? t('tigas_speaking') : listening ? t('tigas_listening') : t('tigas_idle')}
             </p>
@@ -398,7 +399,7 @@ export default function JarvisPage() {
                     ? 'border-red-500/60 bg-red-500/10 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
                     : 'border-app-border text-gray-400 hover:text-cyan-400 hover:border-cyan-500/30'
                 }`}
-                title={listening ? 'Parar gravacao' : 'Falar com o Tigas'}
+                title={listening ? 'Parar gravacao' : `Falar com ${assistantName}`}
               >
                 {listening ? <MicOff size={18} /> : <Mic size={18} />}
               </button>
@@ -472,7 +473,7 @@ export default function JarvisPage() {
             <div className="px-4 py-3 border-b border-app-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Wand2 size={14} className="text-amber-400" />
-                <p className="text-white font-semibold text-sm">Visão Tigas</p>
+                <p className="text-white font-semibold text-sm">Visão {assistantName}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
@@ -614,7 +615,7 @@ export default function JarvisPage() {
 
                 <p className="text-xs text-gray-600 text-center leading-relaxed border-t border-app-border pt-3">
                   Diga <span className="text-gray-500">"completei [tópico]"</span> ou{' '}
-                  <span className="text-gray-500">"o que estudar"</span> para o Tigas atualizar seu mapa
+                  <span className="text-gray-500">"o que estudar"</span> para {assistantName} atualizar seu mapa
                 </p>
               </div>
             ) : (

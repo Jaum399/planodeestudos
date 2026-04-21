@@ -1,18 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart2, Layers, BookOpen, Calendar, Flame, Target, CheckCircle, Clock, Zap, Lock, Timer, Play } from 'lucide-react';
+import { BarChart2, Layers, BookOpen, Calendar, Flame, Target, CheckCircle, Clock, Zap, Lock, Timer, Play, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePreferences } from '../../contexts/PreferencesContext';
-import { analyticsApi } from '../../services/api';
+import { analyticsApi, questionBankApi } from '../../services/api';
 import type { AnalyticsData } from '../../types';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { language, t } = usePreferences();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [lastSimulation, setLastSimulation] = useState<any>(null);
 
   useEffect(() => {
-    analyticsApi.getSummary().then(({ data }) => setAnalytics(data)).catch(() => {});
+    Promise.all([
+      analyticsApi.getSummary(),
+      questionBankApi.getSimulationRanking?.()
+    ]).then(([analyticsRes, rankingRes]) => {
+      setAnalytics(analyticsRes.data);
+      if (rankingRes?.data?.recent?.length > 0) {
+        setLastSimulation(rankingRes.data.recent[0]);
+      }
+    }).catch(() => {});
   }, []);
 
   const weeklyHours = analytics ? Math.round(analytics.weeklyMinutes / 60) : 0;
@@ -26,6 +35,35 @@ export default function Dashboard() {
     if (h < 18) return t('dash_greeting_afternoon');
     return t('dash_greeting_evening');
   };
+
+  const getRelativeDate = (dateStr: string): string => {
+    const diffDays = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'hoje';
+    return `há ${diffDays} dias`;
+  };
+
+  const specialtyEmojis: Record<string, string> = {
+    'Medicina': '👨‍⚕️', 'Cardiologia': '❤️', 'Neurologia': '🧠',
+    'Pediatria': '👶', 'Cirurgia': '🔪', 'Farmacologia': '💊',
+    'Oftalmologia': '👁️', 'Dermatologia': '🩹', 'Residência Médica': '🏥',
+    'default': '🏥'
+  };
+
+  const getSpecialtyIcon = (area: string): string => specialtyEmojis[area] || specialtyEmojis['default'];
+
+  const phaseConfig = {
+    basico: { label: 'Básico', color: 'bg-blue-500/20 text-blue-400' },
+    clinico: { label: 'Clínico', color: 'bg-green-500/20 text-green-400' },
+    internato: { label: 'Internato', color: 'bg-purple-500/20 text-purple-400' },
+    residencia: { label: 'Residência', color: 'bg-rose-500/20 text-rose-400' }
+  };
+
+  // Helper: Calculate average accuracy across all subjects
+  const getAverageAccuracy = useMemo(() => {
+    if (!analytics?.subjectAccuracy?.length) return 0;
+    const sum = analytics.subjectAccuracy.reduce((acc, s) => acc + s.accuracy, 0);
+    return Math.round(sum / analytics.subjectAccuracy.length);
+  }, [analytics?.subjectAccuracy]);
 
   const localeByLanguage: Record<'pt' | 'en' | 'es' | 'ca', string> = {
     pt: 'pt-BR',
@@ -65,13 +103,13 @@ export default function Dashboard() {
       )}
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="stat-card">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-orange-500/10 rounded-xl">
               <Flame size={18} className="text-orange-400" />
             </div>
-            <span className="text-orange-400 text-xs font-semibold">Streak</span>
+            <span className="text-orange-400 text-xs font-semibold">🔥 Sequência</span>
           </div>
           <p className="text-3xl font-black text-white">{analytics?.streak ?? 0}</p>
           <p className="text-gray-500 text-xs mt-1">{t('dash_streak_days')}</p>
@@ -82,7 +120,7 @@ export default function Dashboard() {
             <div className="p-2 bg-primary-600/10 rounded-xl">
               <Target size={18} className="text-primary-400" />
             </div>
-            <span className="text-primary-400 text-xs font-semibold">{t('dash_week')}</span>
+            <span className="text-primary-400 text-xs font-semibold">🎯 Progresso</span>
           </div>
           <p className="text-3xl font-black text-white">{weeklyProgress}%</p>
           <p className="text-gray-500 text-xs mt-1">{weeklyHours}h / {weeklyGoal}h</p>
@@ -93,7 +131,7 @@ export default function Dashboard() {
             <div className="p-2 bg-emerald-500/10 rounded-xl">
               <CheckCircle size={18} className="text-emerald-400" />
             </div>
-            <span className="text-emerald-400 text-xs font-semibold">Planner</span>
+            <span className="text-emerald-400 text-xs font-semibold">✅ Revisões</span>
           </div>
           <p className="text-3xl font-black text-white">{analytics?.plannerStats?.done ?? 0}</p>
           <p className="text-gray-500 text-xs mt-1">{t('dash_tasks_completed')}</p>
@@ -104,10 +142,38 @@ export default function Dashboard() {
             <div className="p-2 bg-violet-500/10 rounded-xl">
               <BookOpen size={18} className="text-violet-400" />
             </div>
-            <span className="text-violet-400 text-xs font-semibold">Flashcards</span>
+            <span className="text-violet-400 text-xs font-semibold">📚 Aprendizagem</span>
           </div>
           <p className="text-3xl font-black text-white">{analytics?.flashcardStats?.total ?? 0}</p>
           <p className="text-gray-500 text-xs mt-1">{t('dash_created')}</p>
+        </div>
+
+        {/* Acurácia Geral */}
+        <div className="stat-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-cyan-500/10 rounded-xl">
+              <Target size={18} className="text-cyan-400" />
+            </div>
+            <span className="text-cyan-400 text-xs font-semibold">🎯 Desempenho</span>
+          </div>
+          <p className="text-3xl font-black text-white">{getAverageAccuracy}%</p>
+          <p className="text-gray-500 text-xs mt-1">Acurácia média</p>
+        </div>
+
+        {/* Última Simulação */}
+        <div className="stat-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-rose-500/10 rounded-xl">
+              <TrendingUp size={18} className="text-rose-400" />
+            </div>
+            <span className="text-rose-400 text-xs font-semibold">📊 Última Quiz</span>
+          </div>
+          <p className="text-3xl font-black text-white">
+            {lastSimulation ? `${lastSimulation.correct_answers}/${lastSimulation.total_questions}` : '-'}
+          </p>
+          <p className="text-gray-500 text-xs mt-1">
+            {lastSimulation ? `${lastSimulation.accuracy}% ${getRelativeDate(lastSimulation.created_at)}` : 'Dados da simulação'}
+          </p>
         </div>
       </div>
 
@@ -170,10 +236,10 @@ export default function Dashboard() {
         <h2 className="text-white font-semibold mb-4">{t('dash_quick_access')}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { to: '/app/planner', icon: Layers, label: 'Planner', color: 'from-primary-700 to-primary-500', desc: `${(analytics?.plannerStats?.in_progress ?? 0)} ${t('dash_in_progress')}`, premium: true },
-            { to: '/app/flashcards', icon: BookOpen, label: 'Flashcards', color: 'from-violet-700 to-violet-500', desc: `${analytics?.flashcardStats?.total ?? 0} ${t('dash_cards')}`, premium: true },
-            { to: '/app/schedule', icon: Calendar, label: t('nav_schedule'), color: 'from-indigo-700 to-indigo-500', desc: t('dash_schedule_view_week'), premium: true },
-            { to: '/app/analytics', icon: BarChart2, label: t('nav_analytics'), color: 'from-fuchsia-700 to-fuchsia-500', desc: t('dash_analytics_view_progress'), premium: true },
+            { to: '/app/planner', icon: Layers, label: '📋 Planner', color: 'from-primary-700 to-primary-500', desc: `${(analytics?.plannerStats?.in_progress ?? 0)} ${t('dash_in_progress')}`, premium: true },
+            { to: '/app/flashcards', icon: BookOpen, label: '📚 Flashcards', color: 'from-violet-700 to-violet-500', desc: `${analytics?.flashcardStats?.total ?? 0} ${t('dash_cards')}`, premium: true },
+            { to: '/app/schedule', icon: Calendar, label: `📅 ${t('nav_schedule')}`, color: 'from-indigo-700 to-indigo-500', desc: t('dash_schedule_view_week'), premium: true },
+            { to: '/app/analytics', icon: BarChart2, label: `📊 ${t('nav_analytics')}`, color: 'from-fuchsia-700 to-fuchsia-500', desc: t('dash_analytics_view_progress'), premium: true },
           ].map(({ to, icon: Icon, label, color, desc, premium }) => (
             <Link
               key={to}
@@ -227,10 +293,18 @@ export default function Dashboard() {
             {t('dash_my_goal')}
           </h3>
           {user.area && (
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-400 text-sm flex items-center gap-2">
+              <span className="text-lg">{getSpecialtyIcon(user.area)}</span>
               <span className="text-gray-500">{t('dash_area_label')} </span>
               <span className="text-white font-medium">{user.area}</span>
             </p>
+          )}
+          {user?.phase && (
+            <div className="mt-3 inline-block">
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${phaseConfig[user.phase]?.color}`}>
+                📚 {phaseConfig[user.phase]?.label}
+              </span>
+            </div>
           )}
           {user.goal && (
             <p className="text-gray-400 text-sm mt-1">

@@ -25,15 +25,20 @@ export default function PublicPreferenceControls({ compact = false, className = 
         <Languages size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
         <select
           value={language}
-          onChange={(e) => setLanguage(e.target.value as 'pt' | 'en' | 'es' | 'ca')}
+          onChange={(e) => {
+            const newLang = e.target.value as 'pt' | 'en' | 'es' | 'ca';
+            setLanguage(newLang);
+            localStorage.setItem('app.language', newLang);
+            window.location.reload();
+          }}
           title={t('language_label')}
           aria-label={t('language_label')}
           className={`public-control-select ${compact ? 'h-9 pl-9 pr-8 text-xs min-w-[92px]' : 'h-10 pl-9 pr-9 text-sm min-w-[110px]'}`}
         >
-          <option value="pt">PT</option>
-          <option value="en">EN</option>
-          <option value="es">ES</option>
-          <option value="ca">CA</option>
+          <option value="pt">Português</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="ca">Català</option>
         </select>
       </div>
     </div>

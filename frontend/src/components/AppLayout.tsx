@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Layers, Calendar, BarChart2,
-  Settings, LogOut, Menu, BrainCircuit, Zap, Crown, Map, Bot, Sun, Moon, Languages, Bell, Stethoscope, Timer, X, Volume2, VolumeX
+  Settings, LogOut, Menu, BrainCircuit, Zap, Crown, Map, Bot, Sun, Moon, Languages, Bell, Timer, X, FileText, Download, HelpCircle, ScrollText, ClipboardList, Users
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePreferences } from '../contexts/PreferencesContext';
-import { jarvisApi, medhubCertificationApi, reminderSessionApi } from '../services/api';
+import { jarvisApi, reminderSessionApi } from '../services/api';
+import { DOWNLOAD_LINKS } from '../services/downloadLinks';
 import TrialBanner from './TrialBanner';
 
 const LANG_TO_SPEECH: Record<'pt' | 'en' | 'es' | 'ca', string> = {
@@ -46,29 +47,30 @@ const DEFAULT_VOICE_ADAPTATION: VoiceAdaptation = {
 };
 
 const navItems = [
-  { path: '/app/medhub', labelKey: 'nav_medhub', icon: Stethoscope },
   { path: '/app/dashboard', labelKey: 'nav_dashboard', icon: LayoutDashboard },
+  { path: '/app/how-to-study', labelKey: 'nav_how_to_study', icon: HelpCircle },
   { path: '/app/planner', labelKey: 'nav_planner', icon: Layers, premium: true },
+  { path: '/app/question-bank', labelKey: 'nav_question_bank', icon: ClipboardList },
   { path: '/app/flashcards', labelKey: 'nav_flashcards', icon: BookOpen, premium: true },
+  { path: '/app/study-summaries', labelKey: 'nav_study_summaries', icon: ScrollText },
   { path: '/app/schedule', labelKey: 'nav_schedule', icon: Calendar, premium: true },
   { path: '/app/analytics', labelKey: 'nav_analytics', icon: BarChart2, premium: true },
   { path: '/app/jarvis', labelKey: 'nav_tigas', icon: Bot, premium: true },
+  { path: '/app/manuals', labelKey: 'nav_manuals', icon: FileText },
+  { path: '/app/notes', labelKey: 'nav_notes', icon: FileText },
+  { path: '/app/community', labelKey: 'nav_community', icon: Users },
   { path: '/app/reminders', labelKey: 'nav_reminders', icon: Bell },
   { path: '/app/pomodoro', labelKey: 'nav_pomodoro', icon: Timer },
+  { path: '/app/pdfs', labelKey: 'nav_pdfs', icon: FileText },
   { path: '/app/mindmap', labelKey: 'nav_mindmap', icon: Map, premium: true },
   { path: '/app/settings', labelKey: 'nav_settings', icon: Settings },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [medhubCertified, setMedhubCertified] = useState(false);
   const [adaptiveVoiceModel, setAdaptiveVoiceModel] = useState<VoiceModel>('tigas_core');
   const [voicePreset, setVoicePreset] = useState<VoicePreset>('adaptive');
   const [voiceAdaptation, setVoiceAdaptation] = useState<VoiceAdaptation>(DEFAULT_VOICE_ADAPTATION);
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
-    const saved = localStorage.getItem('app.voiceEnabled');
-    return saved === null ? true : saved === 'true';
-  });
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -310,74 +312,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadMedhubCertification() {
-      if (!user) {
-        setMedhubCertified(false);
-        return;
-      }
-
-      try {
-        const { data } = await medhubCertificationApi.get();
-        const status = data?.certification?.status;
-        if (!cancelled) {
-          setMedhubCertified(status === 'approved');
-        }
-      } catch {
-        if (!cancelled) {
-          setMedhubCertified(false);
-        }
-      }
-    }
-
-    loadMedhubCertification();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  useEffect(() => {
     speakLoginGreetingAndImportantReminders();
   }, [user]);
-
-  useEffect(() => {
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === 'app.voiceEnabled') {
-        setVoiceEnabled(event.newValue === null ? true : event.newValue === 'true');
-      }
-    };
-    const onVoicePreferenceChanged = (event: Event) => {
-      const custom = event as CustomEvent<{ enabled?: boolean }>;
-      if (typeof custom.detail?.enabled === 'boolean') {
-        setVoiceEnabled(custom.detail.enabled);
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    window.addEventListener('app:voicePreferenceChanged', onVoicePreferenceChanged as EventListener);
-    return () => {
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener('app:voicePreferenceChanged', onVoicePreferenceChanged as EventListener);
-    };
-  }, []);
-
-  const toggleVoice = () => {
-    const next = !voiceEnabled;
-
-    if (!next) {
-      const synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
-      const speakingNow = Boolean(synth?.speaking || synth?.pending);
-      if (speakingNow) {
-        reportVoiceFeedback('interrupted');
-      }
-      reportVoiceFeedback('toggled_off');
-      synth?.cancel();
-    }
-
-    setVoiceEnabled(next);
-    localStorage.setItem('app.voiceEnabled', String(next));
-    window.dispatchEvent(new CustomEvent('app:voicePreferenceChanged', { detail: { enabled: next } }));
-  };
 
   const handleLogout = () => {
     logout();
@@ -388,7 +324,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
 
   const isPremium = user && user.plan !== 'free';
-  const hasMedHubPlan = user?.plan === 'premium_medhub' || Boolean((user as Record<string, unknown> | null)?.isPrivileged);
 
   return (
     <div className="min-h-screen bg-app-bg flex">
@@ -425,50 +360,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ path, labelKey, icon: Icon, premium }) => {
-            const isMedhub = path === '/app/medhub';
-            const isBlockedByPlan = isMedhub && !hasMedHubPlan;
-            const isBlockedByCertification = isMedhub && !medhubCertified;
-
-            if (isBlockedByPlan) {
-              return (
-                <button
-                  key={path}
-                  type="button"
-                  className="sidebar-item w-full opacity-60 cursor-not-allowed"
-                  title="Disponível no plano com Centro Médico"
-                  onClick={() => {
-                    navigate('/app/upgrade');
-                  }}
-                >
-                  <Icon size={18} />
-                  {t(labelKey)}
-                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-600/20 text-primary-300 border border-primary-500/30">
-                    MedHub PRO
-                  </span>
-                </button>
-              );
-            }
-
-            if (isBlockedByCertification) {
-              return (
-                <button
-                  key={path}
-                  type="button"
-                  className="sidebar-item w-full opacity-60 cursor-not-allowed"
-                  title={t('app_requires_certification_access')}
-                  onClick={() => {
-                    navigate('/app/medhub');
-                  }}
-                >
-                  <Icon size={18} />
-                  {t(labelKey)}
-                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                    {t('app_requires_certification_badge')}
-                  </span>
-                </button>
-              );
-            }
-
             return (
               <Link
                 key={path}
@@ -486,6 +377,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        {/* Download cards */}
+        <div className="px-3 py-2">
+          <div className="grid grid-cols-2 gap-1.5">
+            <a
+              href={DOWNLOAD_LINKS.androidApk}
+              download
+              className="rounded-md border border-primary-500/30 bg-gradient-to-b from-primary-500/15 to-app-card/70 hover:from-primary-500/25 hover:to-app-card transition-colors p-1.5 min-h-[52px] flex flex-col items-center justify-center text-center gap-0.5"
+            >
+              <Download size={13} className="text-primary-300" />
+              <span className="text-white text-[10px] font-semibold leading-tight">Baixar Android</span>
+            </a>
+            <a
+              href={DOWNLOAD_LINKS.iosInstall}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-primary-500/30 bg-gradient-to-b from-primary-500/15 to-app-card/70 hover:from-primary-500/25 hover:to-app-card transition-colors p-1.5 min-h-[52px] flex flex-col items-center justify-center text-center gap-0.5"
+            >
+              <Download size={13} className="text-primary-300" />
+              <span className="text-white text-[10px] font-semibold leading-tight">Instalar iPhone</span>
+            </a>
+          </div>
+        </div>
 
         {/* Upgrade banner for free users */}
         {!isPremium && (
@@ -560,27 +474,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
 
-            <button
-              onClick={toggleVoice}
-              title={`${t('settings_auto_voice_login')} (${adaptiveVoiceModel})`}
-              className={`h-9 px-3 rounded-lg border transition-colors flex items-center gap-1.5 text-xs font-semibold ${voiceEnabled ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:text-emerald-200' : 'border-amber-500/50 bg-amber-500/10 text-amber-300 hover:text-amber-200'}`}
-            >
-              {voiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-              <span>{t('settings_auto_voice_login')}: {voiceEnabled ? t('settings_enabled') : t('settings_disabled')}</span>
-            </button>
-
             <div className="relative">
               <Languages size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
               <select
                 value={language}
-                onChange={(e) => setLanguage(e.target.value as 'pt' | 'en' | 'es' | 'ca')}
+                onChange={(e) => {
+                  const newLang = e.target.value as 'pt' | 'en' | 'es' | 'ca';
+                  setLanguage(newLang);
+                  localStorage.setItem('app.language', newLang);
+                  window.location.reload();
+                }}
                 title={t('language_label')}
                 className="h-9 pl-8 pr-3 rounded-lg border border-app-border bg-app-card text-gray-300 text-xs focus:outline-none focus:border-primary-500/40"
               >
-                <option value="pt">PT</option>
-                <option value="en">EN</option>
-                <option value="es">ES</option>
-                <option value="ca">CA</option>
+                <option value="pt">Português</option>
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="ca">Català</option>
               </select>
             </div>
 

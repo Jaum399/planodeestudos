@@ -1,8 +1,9 @@
 import { useEffect, useState, FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { authApi, jarvisApi } from '../../services/api';
-import { Check, User, Lock, Target, Palette, Languages, Volume2, RotateCcw, TrendingDown, TrendingUp, BrainCircuit, Sparkles } from 'lucide-react';
+import { Check, User, Lock, Target, Palette, Languages, Volume2, RotateCcw, TrendingDown, TrendingUp, BrainCircuit, Sparkles, FileText } from 'lucide-react';
 
 const AREAS = [
   '', 'Faculdade', 'Residência Médica', 'OAB', 'ENEM & Vestibulares',
@@ -68,6 +69,7 @@ export default function Settings() {
     goal: user?.goal || '',
     weekly_goal_hours: user?.weekly_goal_hours || 20,
     whatsapp: user?.whatsapp || '',
+    assistant_name: user?.assistant_name || 'Tigas',
   });
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
@@ -110,6 +112,18 @@ export default function Settings() {
       cancelled = true;
     };
   }, [t]);
+
+  useEffect(() => {
+    setProfileForm((prev) => ({
+      ...prev,
+      name: user?.name || '',
+      area: user?.area || '',
+      goal: user?.goal || '',
+      weekly_goal_hours: user?.weekly_goal_hours || 20,
+      whatsapp: user?.whatsapp || '',
+      assistant_name: user?.assistant_name || 'Tigas',
+    }));
+  }, [user]);
 
   const weeklyFeedback = voiceAdaptation.daily_feedback.slice(-7);
   const weeklyTotals = weeklyFeedback.reduce(
@@ -220,6 +234,7 @@ export default function Settings() {
         goal: profileForm.goal,
         weekly_goal_hours: profileForm.weekly_goal_hours,
         whatsapp: profileForm.whatsapp,
+        assistant_name: profileForm.assistant_name,
       });
       updateUser(data.user);
       setProfileSuccess(true);
@@ -326,6 +341,17 @@ export default function Settings() {
               value={profileForm.goal}
               onChange={e => setProfileForm(p => ({ ...p, goal: e.target.value }))}
             />
+          </div>
+
+          <div>
+            <label className="block text-gray-400 text-xs font-medium mb-1.5">Nome da sua IA</label>
+            <input
+              className="input-field"
+              placeholder="Ex: Athena"
+              value={profileForm.assistant_name}
+              onChange={e => setProfileForm(p => ({ ...p, assistant_name: e.target.value.slice(0, 40) }))}
+            />
+            <p className="text-[11px] text-gray-600 mt-1">Esse nome será usado pelo assistente nas conversas.</p>
           </div>
 
           <div>
@@ -493,13 +519,18 @@ export default function Settings() {
             </label>
             <select
               value={language}
-              onChange={(e) => setLanguage(e.target.value as 'pt' | 'en' | 'es' | 'ca')}
+              onChange={(e) => {
+                const newLang = e.target.value as 'pt' | 'en' | 'es' | 'ca';
+                setLanguage(newLang);
+                localStorage.setItem('app.language', newLang);
+                window.location.reload();
+              }}
               className="input-field"
             >
-              <option value="pt">Portugues</option>
+              <option value="pt">Português</option>
               <option value="en">English</option>
-              <option value="es">Espanol</option>
-              <option value="ca">Catala</option>
+              <option value="es">Español</option>
+              <option value="ca">Català</option>
             </select>
           </div>
 
@@ -518,6 +549,22 @@ export default function Settings() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="card-glass rounded-2xl p-6 card-glow">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-white font-semibold mb-2 flex items-center gap-2">
+              <FileText size={16} className="text-primary-400" /> Biblioteca de PDFs
+            </h2>
+            <p className="text-gray-400 text-sm">
+              Seus materiais agora ficam em uma area propria para pastas, upload em partes e abertura autenticada.
+            </p>
+          </div>
+          <Link to="/app/pdfs" className="btn-primary text-sm px-4 py-2 whitespace-nowrap">
+            Abrir biblioteca
+          </Link>
         </div>
       </div>
 

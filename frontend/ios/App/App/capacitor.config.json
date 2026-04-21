@@ -12,5 +12,7 @@
 	"ios": {
 		"contentInset": "automatic"
 	},
-	"packageClassList": []
+	"packageClassList": [
+		"LocalNotificationsPlugin"
+	]
 }

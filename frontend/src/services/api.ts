@@ -1,7 +1,17 @@
 import axios from 'axios';
+import { Capacitor } from '@capacitor/core';
+
+const isNativePlatform = Capacitor.isNativePlatform();
+const viteEnv = (import.meta as unknown as { env?: Record<string, string> }).env || {};
+const nativeApiBaseUrl =
+  viteEnv.VITE_MOBILE_API_BASE_URL ||
+  viteEnv.VITE_API_BASE_URL ||
+  'https://app-planodeestudos.vercel.app/api';
+
+const resolvedApiBaseUrl = isNativePlatform ? nativeApiBaseUrl : '/api';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: resolvedApiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -36,7 +46,7 @@ export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post('/auth/login', data),
   me: () => api.get('/auth/me'),
-  updateMe: (data: { name?: string; area?: string; goal?: string; weekly_goal_hours?: number; billingDocument?: string; whatsapp?: string }) =>
+  updateMe: (data: { name?: string; area?: string; goal?: string; weekly_goal_hours?: number; billingDocument?: string; whatsapp?: string; assistant_name?: string }) =>
     api.put('/auth/me', data),
   changePassword: (data: { current_password: string; new_password: string }) =>
     api.put('/auth/password', data),
@@ -64,9 +74,32 @@ export const flashcardsApi = {
     api.post('/flashcards', data),
   review: (id: string, difficulty: number) =>
     api.put(`/flashcards/${id}/review`, { difficulty }),
-  update: (id: string, data: { subject?: string; question?: string; answer?: string }) =>
-    api.put(`/flashcards/${id}`, data),
   delete: (id: string) => api.delete(`/flashcards/${id}`),
+  getDecks: () => api.get('/flashcards/decks'),
+  createDeck: (data: any) => api.post('/flashcards/decks', data),
+  deleteDeck: (id: string) => api.delete(`/flashcards/decks/${id}`),
+  addCardToDeck: (deckId: string, flashcardId: string) =>
+    api.post(`/flashcards/decks/${deckId}/add-card`, { flashcard_id: flashcardId }),
+  removeCardFromDeck: (deckId: string, cardId: string) =>
+    api.delete(`/flashcards/decks/${deckId}/remove-card/${cardId}`),
+};
+
+// PDF Library
+export const pdfApi = {
+  list: () => api.get('/pdfs'),
+  createFolder: (name: string) => api.post('/pdfs/folders', { name }),
+  deleteFolder: (id: string) => api.delete(`/pdfs/folders/${id}`),
+  initUpload: (data: { title?: string; folder_id?: string | null; file_name: string; mime_type: string; size_bytes: number }) =>
+    api.post('/pdfs/uploads/init', data),
+  uploadChunk: (documentId: string, data: { chunk_index: number; total_chunks: number; chunk_data: string }) =>
+    api.post(`/pdfs/uploads/${documentId}/chunks`, data),
+  completeUpload: (documentId: string) => api.post(`/pdfs/uploads/${documentId}/complete`),
+  uploadDocument: (data: { title?: string; folder_id?: string | null; file_name: string; mime_type: string; size_bytes: number; data_url: string }) =>
+    api.post('/pdfs/documents', data),
+  getDocumentFileUrl: (id: string) => `${resolvedApiBaseUrl}/pdfs/documents/${id}/file`,
+  getDocumentBlob: (id: string) => api.get(`/pdfs/documents/${id}/file`, { responseType: 'blob' }),
+  updateDocument: (id: string, data: { title?: string; folder_id?: string | null }) => api.put(`/pdfs/documents/${id}`, data),
+  deleteDocument: (id: string) => api.delete(`/pdfs/documents/${id}`),
 };
 
 // Schedule
@@ -74,8 +107,6 @@ export const scheduleApi = {
   getAll: () => api.get('/schedule'),
   create: (data: { day_of_week: number; subject: string; duration_minutes: number; time_slot?: string; color?: string }) =>
     api.post('/schedule', data),
-  update: (id: string, data: Partial<{ day_of_week: number; subject: string; duration_minutes: number; time_slot: string; color: string }>) =>
-    api.put(`/schedule/${id}`, data),
   delete: (id: string) => api.delete(`/schedule/${id}`),
 };
 
@@ -84,13 +115,12 @@ export const analyticsApi = {
   getSummary: () => api.get('/analytics'),
   logSession: (data: { subject: string; duration_minutes: number; correct_answers?: number; total_questions?: number }) =>
     api.post('/analytics/session', data),
-  getSessions: () => api.get('/analytics/sessions'),
 };
 
 // Payment
 export const paymentApi = {
   getStatus: () => api.get('/payment/status'),
-  createCheckout: (planType: 'standard' | 'medhub' = 'standard') => api.post('/payment/create-checkout', { planType }),
+  createCheckout: (planType: 'standard' = 'standard') => api.post('/payment/create-checkout', { planType }),
   getPortal: () => api.get('/payment/portal'),
 };
 
@@ -136,7 +166,7 @@ export const questionBankApi = {
     api.post('/question-bank/attempt', data),
   simulate: (data: { phase?: string; count?: number; duration_seconds?: number; answers?: Array<{ question_id: string; selected_index: number }> }) =>
     api.post('/question-bank/simulate', data),
-  ranking: () => api.get('/question-bank/simulate/ranking'),
+  getSimulationRanking: () => api.get('/question-bank/simulate/ranking'),
 };
 
 // Study Tools (summaries + mnemonics)
@@ -150,71 +180,6 @@ export const studyToolsApi = {
   summaryToFlashcards: (summaryId: string) =>
     api.post(`/study-tools/summaries/${summaryId}/to-flashcards`),
   dailyPlan: () => api.get('/study-tools/daily-plan'),
-};
-
-// MedHub Workspace (persistência dos módulos funcionais)
-export const medhubWorkspaceApi = {
-  getWorkspace: () => api.get('/medhub/workspace'),
-  saveWorkspace: (workspace: Record<string, unknown>) => api.put('/medhub/workspace', { workspace }),
-};
-
-export const medhubPublicApi = {
-  signupClinic: (data: {
-    full_name: string;
-    email: string;
-    ddd?: string;
-    phone?: string;
-    clinic_name?: string;
-    cnpj?: string;
-    crm?: string;
-    source?: string;
-  }) => api.post('/medhub/public-signup', data),
-};
-
-export const medhubLeadsApi = {
-  list: (params?: {
-    status?: 'new' | 'contacted' | 'qualified' | 'closed';
-    q?: string;
-    page?: number;
-    pageSize?: number;
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
-  }) =>
-    api.get('/medhub/leads', { params }),
-  updateStatus: (leadId: string, status: 'new' | 'contacted' | 'qualified' | 'closed') =>
-    api.patch(`/medhub/leads/${leadId}/status`, { status }),
-};
-
-export const medhubMarketplaceApi = {
-  list: (params?: {
-    city?: string;
-    state?: string;
-    type?: 'all' | 'public' | 'private';
-    specialty?: string;
-    lat?: number;
-    lon?: number;
-    page?: number;
-    pageSize?: number;
-  }) => api.get('/medhub/marketplace', { params }),
-};
-
-export const medhubCertificationApi = {
-  get: () => api.get('/medhub/certification'),
-  submit: (data: {
-    type: 'clinic' | 'doctor' | 'both';
-    contact_phone: string;
-    clinic_city: string;
-    clinic_state: string;
-    clinic_address: string;
-    cnpj?: string;
-    crm_number?: string;
-    crm_state?: string;
-  }) => api.post('/medhub/certification', data),
-  cancel: () => api.delete('/medhub/certification'),
-  adminListPending: () => api.get('/medhub/certification/admin/pending'),
-  adminUpdateStatus: (userId: string, status: 'approved' | 'rejected', rejection_reason?: string) =>
-    api.patch(`/medhub/certification/admin/${userId}/status`, { status, rejection_reason }),
 };
 
 export default api;

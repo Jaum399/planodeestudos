@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit, Zap, Calendar, Layers, BookOpen, BarChart2,
-  Smartphone, CheckCircle2, Star, ArrowRight, Shield, Clock, Award
+  Smartphone, CheckCircle2, Star, ArrowRight, Shield, Clock, Award, Download
 } from 'lucide-react';
 import LandingNavbar from '../components/LandingNavbar';
+import { DOWNLOAD_LINKS } from '../services/downloadLinks';
 
 const areas = [
   'Faculdade', 'Residência Médica', 'OAB', 'ENEM & Vestibulares',
@@ -191,6 +192,29 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-app-bg overflow-x-hidden">
+      <div className="fixed bottom-4 right-4 z-40 w-[calc(100%-2rem)] sm:w-auto">
+        <div className="card-glass border border-primary-500/30 rounded-2xl p-3 shadow-2xl">
+          <p className="text-[11px] text-gray-300 mb-2 font-medium">Baixe o app</p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <a
+              href={DOWNLOAD_LINKS.androidApk}
+              className="btn-primary text-xs px-3 py-2 justify-center"
+              download
+            >
+              <Download size={14} /> Android
+            </a>
+            <a
+              href={DOWNLOAD_LINKS.iosInstall}
+              className="btn-secondary text-xs px-3 py-2 justify-center"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Download size={14} /> iPhone
+            </a>
+          </div>
+        </div>
+      </div>
+
       <LandingNavbar />
 
       {/* ── HERO ── */}
@@ -227,12 +251,39 @@ export default function Landing() {
               Garantir meu acesso agora
               <ArrowRight size={18} />
             </button>
-            <button onClick={() => navigate('/cadastro-clinica')} className="btn-secondary text-base px-8 py-4 justify-center">
-              Cadastre sua Clínica
-            </button>
             <a href="#features" className="btn-secondary text-base px-8 py-4 justify-center">
               Ver como funciona
             </a>
+          </div>
+
+          <div className="max-w-4xl mx-auto mb-14">
+            <div className="card-glass rounded-2xl p-4 md:p-5 border border-primary-600/20">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                  <p className="text-white text-base font-semibold">Baixe a versao mobile</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Use a mesma conta no Web, Android e iOS com tudo sincronizado no mesmo banco de dados.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <a
+                    href={DOWNLOAD_LINKS.androidApk}
+                    className="btn-primary text-sm px-5 py-3 justify-center"
+                    download
+                  >
+                    <Download size={16} /> Baixar Android (APK)
+                  </a>
+                  <a
+                    href={DOWNLOAD_LINKS.iosInstall}
+                    className="btn-secondary text-sm px-5 py-3 justify-center"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Download size={16} /> Instalar iPhone (TestFlight)
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Trust badges */}
@@ -445,6 +496,41 @@ export default function Landing() {
       </section>
 
       {/* ── FINAL CTA ── */}
+      <section className="py-12 md:py-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="card-glass rounded-2xl p-6 md:p-8 border border-app-border">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div>
+                <h3 className="text-white text-2xl font-bold mb-2">Baixe o aplicativo</h3>
+                <p className="text-gray-400 text-sm">
+                  Use a mesma conta no Web, Android e iOS com dados sincronizados no mesmo banco de dados.
+                </p>
+                <p className="text-gray-500 text-xs mt-2">
+                  Android disponivel em APK. iOS via TestFlight para instalacao direta no iPhone.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <a
+                  href={DOWNLOAD_LINKS.androidApk}
+                  className="btn-primary text-sm px-5 py-3 justify-center"
+                  download
+                >
+                  <Download size={16} /> Baixar Android (APK)
+                </a>
+                <a
+                  href={DOWNLOAD_LINKS.iosInstall}
+                  className="btn-secondary text-sm px-5 py-3 justify-center"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Download size={16} /> Instalar iPhone (TestFlight)
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="py-20 md:py-28 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-primary-700/20 rounded-full blur-[80px]" />
