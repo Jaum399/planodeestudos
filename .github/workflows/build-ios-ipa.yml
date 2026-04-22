@@ -89,22 +89,14 @@ jobs:
           echo "⚠️  Compilando SEM assinatura. Para IPA instalavel, configure os secrets:"
           echo "   IOS_CERTIFICATE_P12_BASE64, IOS_CERTIFICATE_PASSWORD,"
           echo "   IOS_PROVISION_PROFILE_BASE64, KEYCHAIN_PASSWORD, APPLE_TEAM_ID"
+          # Compilar para Simulator (nao requer assinatura) para validar o codigo
           xcodebuild \
             -project frontend/ios/App/App.xcodeproj \
             -scheme App \
-            -configuration Release \
-            -destination generic/platform=iOS \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            -archivePath $RUNNER_TEMP/App.xcarchive \
-            archive || \
-          xcodebuild \
-            -project frontend/ios/App/App.xcodeproj \
-            -scheme App \
-            -configuration Release \
+            -configuration Debug \
             -destination "generic/platform=iOS Simulator" \
             -derivedDataPath $RUNNER_TEMP/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
             build
 
       - name: Create ExportOptions.plist
