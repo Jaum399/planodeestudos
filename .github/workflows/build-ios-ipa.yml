@@ -75,7 +75,7 @@ jobs:
         run: |
           set -e
           xcodebuild \
-            -project frontend/ios/App/App.xcodeproj \
+            -workspace frontend/ios/App/App.xcworkspace \
             -scheme App \
             -configuration Release \
             -archivePath $RUNNER_TEMP/App.xcarchive \
@@ -91,7 +91,7 @@ jobs:
           echo "   IOS_PROVISION_PROFILE_BASE64, KEYCHAIN_PASSWORD, APPLE_TEAM_ID"
           # Compilar para Simulator (nao requer assinatura) para validar o codigo
           xcodebuild \
-            -project frontend/ios/App/App.xcodeproj \
+            -workspace frontend/ios/App/App.xcworkspace \
             -scheme App \
             -configuration Debug \
             -destination "generic/platform=iOS Simulator" \
