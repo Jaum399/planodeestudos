@@ -12,7 +12,7 @@ const app = require('../backend/src/index');
 // Garante que o MongoDB está conectado antes de cada request (serverless safe)
 module.exports = async (req, res) => {
   const url = String(req.url || '');
-  const isPublicRoute = url.startsWith('/api/public') || url === '/api/health';
+  const isPublicRoute = url.startsWith('/api/public') || url.startsWith('/public') || url === '/api/health' || url === '/health';
 
   if (isPublicRoute) {
     return app(req, res);
