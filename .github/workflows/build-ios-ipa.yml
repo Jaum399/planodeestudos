@@ -14,7 +14,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
         working-directory: frontend
@@ -28,13 +28,20 @@ jobs:
         working-directory: frontend
         run: npx cap sync ios
 
-      - name: Configure signing assets
+      - name: Configure signing assets (opcional)
+        id: signing
         env:
           IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
+          if [ -z "$IOS_CERTIFICATE_P12_BASE64" ] || [ -z "$IOS_PROVISION_PROFILE_BASE64" ]; then
+            echo "SIGNING_AVAILABLE=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Secrets de assinatura ausentes - build sem assinatura (apenas validacao de compilacao)"
+            exit 0
+          fi
+
           set -e
           CERT_PATH=$RUNNER_TEMP/certificate.p12
           PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
@@ -52,9 +59,50 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      - name: Create ExportOptions.plist
+          echo "SIGNING_AVAILABLE=true" >> $GITHUB_OUTPUT
+          echo "✅ Certificados de assinatura configurados com sucesso"
+
+      - name: Build archive (com assinatura)
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
         run: |
-          cat > $RUNNER_TEMP/ExportOptions.plist << 'EOF'
+          set -e
+          xcodebuild \
+            -project frontend/ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            archive
+
+      - name: Build archive (sem assinatura - validacao)
+        if: steps.signing.outputs.SIGNING_AVAILABLE != 'true'
+        run: |
+          set -e
+          echo "⚠️  Compilando SEM assinatura. Para IPA instalavel, configure os secrets:"
+          echo "   IOS_CERTIFICATE_P12_BASE64, IOS_CERTIFICATE_PASSWORD,"
+          echo "   IOS_PROVISION_PROFILE_BASE64, KEYCHAIN_PASSWORD, APPLE_TEAM_ID"
+          xcodebuild \
+            -project frontend/ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            archive || \
+          xcodebuild \
+            -project frontend/ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath $RUNNER_TEMP/DerivedData \
+            build
+
+      - name: Create ExportOptions.plist
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
+        run: |
+          cat > $RUNNER_TEMP/ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -75,17 +123,8 @@ jobs:
           </plist>
           EOF
 
-      - name: Build archive
-        run: |
-          set -e
-          xcodebuild \
-            -project frontend/ios/App/App.xcodeproj \
-            -scheme App \
-            -configuration Release \
-            -archivePath $RUNNER_TEMP/App.xcarchive \
-            archive
-
       - name: Export IPA
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
         run: |
           set -e
           xcodebuild -exportArchive \
@@ -94,12 +133,22 @@ jobs:
             -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist
 
       - name: Upload IPA artifact
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: ${{ runner.temp }}/output/*.ipa
 
-      - name: Configure App Store Connect API key (optional)
+      - name: Upload xcarchive (sem assinatura)
+        if: steps.signing.outputs.SIGNING_AVAILABLE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-xcarchive-unsigned
+          path: ${{ runner.temp }}/App.xcarchive
+          if-no-files-found: warn
+
+      - name: Configure App Store Connect API key (opcional)
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
         env:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
@@ -113,7 +162,8 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           echo "$APPSTORE_PRIVATE_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
-      - name: Upload to TestFlight (optional)
+      - name: Upload to TestFlight (opcional)
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
         env:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
