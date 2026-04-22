@@ -16,6 +16,14 @@ function getSafeIosInstallUrl(rawUrl) {
   return candidate;
 }
 
+function getSafeAndroidDownloadUrl(rawUrl) {
+  const fallback = 'https://github.com/Jaum399/planodeestudos/releases';
+  const candidate = String(rawUrl || '').trim();
+  if (!candidate) return fallback;
+  if (/^\/download\//i.test(candidate)) return fallback;
+  return candidate;
+}
+
 function getBaseUrl(req) {
   const forwardedHost = req.headers['x-forwarded-host'];
   const forwardedProto = req.headers['x-forwarded-proto'];
@@ -26,7 +34,7 @@ function getBaseUrl(req) {
 
 function getPublicConfig(req) {
   const baseUrl = process.env.PUBLIC_APP_URL || getBaseUrl(req);
-  const androidDownloadUrl = process.env.ANDROID_DOWNLOAD_URL || `${baseUrl}/download/app-planodeestudos-android.apk`;
+  const androidDownloadUrl = getSafeAndroidDownloadUrl(process.env.ANDROID_DOWNLOAD_URL);
   const iosInstallUrl = getSafeIosInstallUrl(process.env.IOS_INSTALL_URL || process.env.VITE_IOS_INSTALL_URL);
 
   return {
