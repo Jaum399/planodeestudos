@@ -52,6 +52,10 @@ Abra http://localhost:5173 no navegador.
 | POST /api/analytics/session | Registrar sessão de estudo |
 | GET /api/payment/plans | Listar planos |
 | POST /api/payment/subscribe | Assinar (placeholder) |
+| GET /api/public | Catálogo de APIs públicas |
+| GET /api/public/app | Informações públicas do app |
+| GET /api/public/downloads | Links públicos de download/instalação |
+| GET /api/public/plans | Planos públicos para exibição |
 
 ## Integração de Pagamento (Asaas)
 

@@ -15,6 +15,7 @@ const reminderSessionRoutes = require('./routes/reminderSession');
 const questionBankRoutes = require('./routes/questionBank');
 const studyToolsRoutes = require('./routes/studyTools');
 const medHubRoutes = require('./routes/medhub');
+const publicRoutes = require('./routes/public');
 
 const { initializeDatabase } = require('./database');
 
@@ -49,6 +50,7 @@ app.use('/api/reminder-session', reminderSessionRoutes);
 app.use('/api/question-bank', questionBankRoutes);
 app.use('/api/study-tools', studyToolsRoutes);
 app.use('/api/medhub', medHubRoutes);
+app.use('/api/public', publicRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
