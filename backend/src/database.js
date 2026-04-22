@@ -416,16 +416,44 @@ function getDatabase() {
 // ── Connection ─────────────────────────────────────────────────────────────────
 
 let connected = false;
+let connectPromise = null;
+
+function getMongoUri() {
+  const raw = process.env.MONGODB_URI;
+  if (!raw) return '';
+  // Vercel/env tooling can accidentally persist CRLF; trim keeps URI valid.
+  return String(raw).trim();
+}
 
 async function initializeDatabase() {
   if (connected) return;
-  const uri = process.env.MONGODB_URI;
+  if (connectPromise) {
+    await connectPromise;
+    return;
+  }
+
+  const uri = getMongoUri();
   if (!uri) {
     throw new Error('MONGODB_URI não configurada. Adicione no .env ou no Vercel Environment Variables.');
   }
-  await mongoose.connect(uri, { dbName: 'mentoria' });
-  connected = true;
-  console.log('MongoDB conectado com sucesso');
+
+  connectPromise = mongoose.connect(uri, {
+    dbName: 'mentoria',
+    serverSelectionTimeoutMS: 8000,
+    connectTimeoutMS: 8000,
+    socketTimeoutMS: 10000,
+    family: 4,
+  }).then(() => {
+    connected = true;
+    console.log('MongoDB conectado com sucesso');
+  }).catch((err) => {
+    connected = false;
+    throw err;
+  }).finally(() => {
+    connectPromise = null;
+  });
+
+  await connectPromise;
 }
 
 module.exports = { getDatabase, initializeDatabase };
