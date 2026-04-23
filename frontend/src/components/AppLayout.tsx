@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Layers, Calendar, BarChart2,
-  Settings, LogOut, Menu, BrainCircuit, Zap, Crown, Map, Bot, Sun, Moon, Languages, Bell, Stethoscope, Timer, X, Volume2, VolumeX
+  Settings, LogOut, Menu, BrainCircuit, Zap, Crown, Map, Bot, Sun, Moon, Languages, Bell, Timer, X, Volume2, VolumeX
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePreferences } from '../contexts/PreferencesContext';
-import { jarvisApi, medhubCertificationApi, reminderSessionApi } from '../services/api';
+import { jarvisApi, reminderSessionApi } from '../services/api';
 import TrialBanner from './TrialBanner';
 
 const LANG_TO_SPEECH: Record<'pt' | 'en' | 'es' | 'ca', string> = {
@@ -46,7 +46,6 @@ const DEFAULT_VOICE_ADAPTATION: VoiceAdaptation = {
 };
 
 const navItems = [
-  { path: '/app/medhub', labelKey: 'nav_medhub', icon: Stethoscope },
   { path: '/app/dashboard', labelKey: 'nav_dashboard', icon: LayoutDashboard },
   { path: '/app/planner', labelKey: 'nav_planner', icon: Layers, premium: true },
   { path: '/app/flashcards', labelKey: 'nav_flashcards', icon: BookOpen, premium: true },
@@ -61,7 +60,6 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [medhubCertified, setMedhubCertified] = useState(false);
   const [adaptiveVoiceModel, setAdaptiveVoiceModel] = useState<VoiceModel>('tigas_core');
   const [voicePreset, setVoicePreset] = useState<VoicePreset>('adaptive');
   const [voiceAdaptation, setVoiceAdaptation] = useState<VoiceAdaptation>(DEFAULT_VOICE_ADAPTATION);
@@ -310,34 +308,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadMedhubCertification() {
-      if (!user) {
-        setMedhubCertified(false);
-        return;
-      }
-
-      try {
-        const { data } = await medhubCertificationApi.get();
-        const status = data?.certification?.status;
-        if (!cancelled) {
-          setMedhubCertified(status === 'approved');
-        }
-      } catch {
-        if (!cancelled) {
-          setMedhubCertified(false);
-        }
-      }
-    }
-
-    loadMedhubCertification();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  useEffect(() => {
     speakLoginGreetingAndImportantReminders();
   }, [user]);
 
@@ -388,7 +358,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
 
   const isPremium = user && user.plan !== 'free';
-  const hasMedHubPlan = user?.plan === 'premium_medhub' || Boolean((user as Record<string, unknown> | null)?.isPrivileged);
 
   return (
     <div className="min-h-screen bg-app-bg flex">
@@ -425,50 +394,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ path, labelKey, icon: Icon, premium }) => {
-            const isMedhub = path === '/app/medhub';
-            const isBlockedByPlan = isMedhub && !hasMedHubPlan;
-            const isBlockedByCertification = isMedhub && !medhubCertified;
-
-            if (isBlockedByPlan) {
-              return (
-                <button
-                  key={path}
-                  type="button"
-                  className="sidebar-item w-full opacity-60 cursor-not-allowed"
-                  title="Disponível no plano com Centro Médico"
-                  onClick={() => {
-                    navigate('/app/upgrade');
-                  }}
-                >
-                  <Icon size={18} />
-                  {t(labelKey)}
-                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-600/20 text-primary-300 border border-primary-500/30">
-                    MedHub PRO
-                  </span>
-                </button>
-              );
-            }
-
-            if (isBlockedByCertification) {
-              return (
-                <button
-                  key={path}
-                  type="button"
-                  className="sidebar-item w-full opacity-60 cursor-not-allowed"
-                  title={t('app_requires_certification_access')}
-                  onClick={() => {
-                    navigate('/app/medhub');
-                  }}
-                >
-                  <Icon size={18} />
-                  {t(labelKey)}
-                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                    {t('app_requires_certification_badge')}
-                  </span>
-                </button>
-              );
-            }
-
             return (
               <Link
                 key={path}

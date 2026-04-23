@@ -93,7 +93,7 @@ export const analyticsApi = {
 // Payment
 export const paymentApi = {
   getStatus: () => api.get('/payment/status'),
-  createCheckout: (planType: 'standard' | 'medhub' = 'standard') => api.post('/payment/create-checkout', { planType }),
+  createCheckout: (planType: 'standard' = 'standard') => api.post('/payment/create-checkout', { planType }),
   getPortal: () => api.get('/payment/portal'),
 };
 
@@ -153,71 +153,6 @@ export const studyToolsApi = {
   summaryToFlashcards: (summaryId: string) =>
     api.post(`/study-tools/summaries/${summaryId}/to-flashcards`),
   dailyPlan: () => api.get('/study-tools/daily-plan'),
-};
-
-// MedHub Workspace (persistência dos módulos funcionais)
-export const medhubWorkspaceApi = {
-  getWorkspace: () => api.get('/medhub/workspace'),
-  saveWorkspace: (workspace: Record<string, unknown>) => api.put('/medhub/workspace', { workspace }),
-};
-
-export const medhubPublicApi = {
-  signupClinic: (data: {
-    full_name: string;
-    email: string;
-    ddd?: string;
-    phone?: string;
-    clinic_name?: string;
-    cnpj?: string;
-    crm?: string;
-    source?: string;
-  }) => api.post('/medhub/public-signup', data),
-};
-
-export const medhubLeadsApi = {
-  list: (params?: {
-    status?: 'new' | 'contacted' | 'qualified' | 'closed';
-    q?: string;
-    page?: number;
-    pageSize?: number;
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
-  }) =>
-    api.get('/medhub/leads', { params }),
-  updateStatus: (leadId: string, status: 'new' | 'contacted' | 'qualified' | 'closed') =>
-    api.patch(`/medhub/leads/${leadId}/status`, { status }),
-};
-
-export const medhubMarketplaceApi = {
-  list: (params?: {
-    city?: string;
-    state?: string;
-    type?: 'all' | 'public' | 'private';
-    specialty?: string;
-    lat?: number;
-    lon?: number;
-    page?: number;
-    pageSize?: number;
-  }) => api.get('/medhub/marketplace', { params }),
-};
-
-export const medhubCertificationApi = {
-  get: () => api.get('/medhub/certification'),
-  submit: (data: {
-    type: 'clinic' | 'doctor' | 'both';
-    contact_phone: string;
-    clinic_city: string;
-    clinic_state: string;
-    clinic_address: string;
-    cnpj?: string;
-    crm_number?: string;
-    crm_state?: string;
-  }) => api.post('/medhub/certification', data),
-  cancel: () => api.delete('/medhub/certification'),
-  adminListPending: () => api.get('/medhub/certification/admin/pending'),
-  adminUpdateStatus: (userId: string, status: 'approved' | 'rejected', rejection_reason?: string) =>
-    api.patch(`/medhub/certification/admin/${userId}/status`, { status, rejection_reason }),
 };
 
 export default api;

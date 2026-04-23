@@ -5,7 +5,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/AppLayout';
 import PremiumGuard from './components/PremiumGuard';
 import BlockedGuard from './components/BlockedGuard';
-import MedHubPlanGuard from './components/MedHubPlanGuard';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -24,7 +23,6 @@ import PaymentSuccess from './pages/app/PaymentSuccess';
 import JarvisPage from './pages/app/Jarvis';
 import MindMapPage from './pages/app/MindMap';
 import ReminderSessionPage from './pages/app/ReminderSession';
-import MedHubPage from './pages/app/MedHub';
 import PomodoroPage from './pages/app/Pomodoro';
 import Blocked from './pages/app/Blocked';
 
@@ -54,34 +52,6 @@ export default function App() {
 
           {/* Protected app routes */}
           <Route path="/app" element={<Navigate to="/app/dashboard" replace />} />
-          <Route
-            path="/app/medhub"
-            element={
-              <ProtectedRoute>
-                <BlockedGuard>
-                  <MedHubPlanGuard>
-                    <AppLayout>
-                      <MedHubPage />
-                    </AppLayout>
-                  </MedHubPlanGuard>
-                </BlockedGuard>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/app/medhub/:moduleKey"
-            element={
-              <ProtectedRoute>
-                <BlockedGuard>
-                  <MedHubPlanGuard>
-                    <AppLayout>
-                      <MedHubPage />
-                    </AppLayout>
-                  </MedHubPlanGuard>
-                </BlockedGuard>
-              </ProtectedRoute>
-            }
-          />
           <Route
             path="/app/dashboard"
             element={

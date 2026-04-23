@@ -5,12 +5,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { authApi, paymentApi } from '../../services/api';
 import PublicPreferenceControls from '../../components/PublicPreferenceControls';
 
-type PlanType = 'standard' | 'medhub';
+type PlanType = 'standard';
 
-const PLAN_PRICES: Record<PlanType, string> = {
-  standard: '49,90',
-  medhub: '89,90',
-};
+const PLAN_PRICE = '49,90';
 
 const FEATURES = [
   'Planner Kanban ilimitado',
@@ -19,11 +16,6 @@ const FEATURES = [
   'Cronograma automático personalizado',
   'Análises e estatísticas detalhadas',
   'Suporte prioritário',
-];
-
-const MEDHUB_EXTRAS = [
-  'Acesso ao Centro Médico (MedHub)',
-  'Ferramentas de clínica e certificação profissional',
 ];
 
 function isValidCpf(doc: string): boolean {
@@ -75,12 +67,11 @@ export default function Upgrade() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [billingDocument, setBillingDocument] = useState((user?.billingDocument || '').replace(/\D/g, ''));
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>(user?.plan === 'premium' ? 'medhub' : 'standard');
 
   const isPremium = user && user.plan !== 'free';
-  const hasMedHubPlan = user?.plan === 'premium_medhub';
 
-  async function handleSubscribe(planType: PlanType) {
+  async function handleSubscribe() {
+    const planType: PlanType = 'standard';
     setLoading(true);
     setError('');
     try {
@@ -90,12 +81,8 @@ export default function Upgrade() {
         return;
       }
 
-      if (planType === 'standard' && user?.plan === 'premium') {
-        setError('Seu plano Premium padrão já está ativo.');
-        return;
-      }
-      if (planType === 'medhub' && user?.plan === 'premium_medhub') {
-        setError('Seu plano com Centro Médico já está ativo.');
+      if (user?.plan === 'premium') {
+        setError('Seu plano Premium já está ativo.');
         return;
       }
 
@@ -132,15 +119,15 @@ export default function Upgrade() {
     }
   }
 
-  if (isPremium && hasMedHubPlan) {
+  if (isPremium) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <div className="w-20 h-20 rounded-2xl bg-primary-600/20 border border-primary-500/30 flex items-center justify-center mb-5">
           <Crown size={32} className="text-primary-400" />
         </div>
-        <h2 className="text-white text-2xl font-bold public-heading mb-2">Você já tem o plano completo!</h2>
+        <h2 className="text-white text-2xl font-bold public-heading mb-2">Você já tem o plano Premium!</h2>
         <p className="text-gray-400 mb-6">
-          Plano ativo: <span className="text-primary-400 font-semibold capitalize">Premium + Centro Médico</span>
+          Plano ativo: <span className="text-primary-400 font-semibold capitalize">Premium</span>
         </p>
         <div className="flex gap-3">
           <button onClick={() => navigate('/app/dashboard')} className="btn-primary">
@@ -173,7 +160,7 @@ export default function Upgrade() {
           </button>
           <div>
             <h1 className="text-white text-2xl font-bold public-heading">Assine o Premium</h1>
-            <p className="text-gray-400 text-sm public-subheading">Plano Premium: R$49,90 • Premium + Centro Médico: R$89,90</p>
+            <p className="text-gray-400 text-sm public-subheading">Plano Premium: R$49,90/mês</p>
           </div>
         </div>
         <PublicPreferenceControls compact />
@@ -181,31 +168,10 @@ export default function Upgrade() {
 
       {/* Plan card */}
       <div className="bg-app-card border border-primary-500/40 rounded-2xl p-8 ring-1 ring-primary-500/20 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-          <button
-            type="button"
-            onClick={() => setSelectedPlan('standard')}
-            className={`rounded-xl px-4 py-3 text-left border transition-colors ${selectedPlan === 'standard' ? 'border-primary-500 bg-primary-600/15' : 'border-app-border hover:border-primary-500/40'}`}
-          >
-            <p className="text-white font-semibold">Premium</p>
-            <p className="text-gray-400 text-xs">Sem Centro Médico</p>
-            <p className="text-primary-300 text-sm mt-1">R$49,90/mês</p>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedPlan('medhub')}
-            className={`rounded-xl px-4 py-3 text-left border transition-colors ${selectedPlan === 'medhub' ? 'border-primary-500 bg-primary-600/15' : 'border-app-border hover:border-primary-500/40'}`}
-          >
-            <p className="text-white font-semibold">Premium + Centro Médico</p>
-            <p className="text-gray-400 text-xs">Inclui acesso ao MedHub</p>
-            <p className="text-primary-300 text-sm mt-1">R$89,90/mês</p>
-          </button>
-        </div>
-
         {/* Badge */}
         <div className="flex justify-center mb-6">
           <span className="px-4 py-1.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-primary-600 to-primary-800">
-            {selectedPlan === 'medhub' ? 'PLANO MENSAL + CENTRO MÉDICO' : 'PLANO MENSAL'}
+            PLANO MENSAL
           </span>
         </div>
 
@@ -213,8 +179,8 @@ export default function Upgrade() {
         <div className="text-center mb-8">
           <div className="flex items-end justify-center gap-1">
             <span className="text-gray-400 text-lg font-medium mb-1">R$</span>
-            <span className="text-white text-6xl font-extrabold leading-none">{PLAN_PRICES[selectedPlan].split(',')[0]}</span>
-            <span className="text-white text-3xl font-bold mb-1">,{PLAN_PRICES[selectedPlan].split(',')[1]}</span>
+            <span className="text-white text-6xl font-extrabold leading-none">{PLAN_PRICE.split(',')[0]}</span>
+            <span className="text-white text-3xl font-bold mb-1">,{PLAN_PRICE.split(',')[1]}</span>
           </div>
           <p className="text-gray-500 text-sm mt-2">por mês • Cancele quando quiser</p>
         </div>
@@ -230,14 +196,6 @@ export default function Upgrade() {
               <div key={f} className="flex items-center gap-3 text-sm text-gray-300">
                 <div className="w-5 h-5 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center flex-shrink-0">
                   <Check size={11} className="text-green-400" />
-                </div>
-                {f}
-              </div>
-            ))}
-            {selectedPlan === 'medhub' && MEDHUB_EXTRAS.map((f) => (
-              <div key={f} className="flex items-center gap-3 text-sm text-emerald-300">
-                <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
-                  <Check size={11} className="text-emerald-400" />
                 </div>
                 {f}
               </div>
@@ -261,14 +219,14 @@ export default function Upgrade() {
         </div>
 
         <button
-          onClick={() => handleSubscribe(selectedPlan)}
+          onClick={() => handleSubscribe()}
           disabled={loading}
           className="w-full py-4 rounded-xl font-bold text-white text-base bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-primary-900/30"
         >
           {loading ? (
             <><Loader2 size={18} className="animate-spin" /> Redirecionando...</>
           ) : (
-            <><Zap size={18} /> Assinar agora — R${PLAN_PRICES[selectedPlan]}/mês</>
+            <><Zap size={18} /> Assinar agora — R${PLAN_PRICE}/mês</>
           )}
         </button>
 

@@ -268,122 +268,6 @@ const mockExamResultSchema = new mongoose.Schema({
 mockExamResultSchema.index({ user_id: 1, created_at: -1 });
 mockExamResultSchema.index({ user_id: 1, accuracy: -1, created_at: -1 });
 
-const medHubTissGuideSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  patient: { type: String, required: true },
-  operator: { type: String, required: true },
-  amount: { type: Number, required: true },
-  status: { type: String, enum: ['draft', 'sent', 'paid'], default: 'draft' },
-}, { _id: false });
-
-const medHubProtocolSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  name: { type: String, required: true },
-  active: { type: Boolean, default: true },
-}, { _id: false });
-
-const medHubCredentialingSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  operator: { type: String, required: true },
-  stage: { type: String, enum: ['documents', 'analysis', 'approved'], default: 'documents' },
-}, { _id: false });
-
-const medHubTeleQueueSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  patient: { type: String, required: true },
-  date: { type: String, required: true },
-  status: { type: String, enum: ['scheduled', 'live', 'finished'], default: 'scheduled' },
-}, { _id: false });
-
-const medHubPrescriptionSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  patient: { type: String, required: true },
-  drug: { type: String, required: true },
-  created_at: { type: String, required: true },
-}, { _id: false });
-
-const medHubRecordNoteSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  patient: { type: String, required: true },
-  note: { type: String, required: true },
-  created_at: { type: String, required: true },
-}, { _id: false });
-
-const medHubWorkspaceSchema = new mongoose.Schema({
-  _id: { type: String, required: true }, // user_id
-  ai_slots: { type: [String], default: [] },
-  tiss_guides: { type: [medHubTissGuideSchema], default: [] },
-  protocols: { type: [medHubProtocolSchema], default: [] },
-  credentialing: { type: [medHubCredentialingSchema], default: [] },
-  tele_queue: { type: [medHubTeleQueueSchema], default: [] },
-  visibility_stats: {
-    patients: { type: Number, default: 0 },
-    operators: { type: Number, default: 0 },
-  },
-  prescriptions: { type: [medHubPrescriptionSchema], default: [] },
-  record_notes: { type: [medHubRecordNoteSchema], default: [] },
-  updated_at: { type: String, required: true },
-}, { _id: false });
-
-const clinicLeadSchema = new mongoose.Schema({
-  _id: { type: String, required: true },
-  full_name: { type: String, required: true },
-  email: { type: String, required: true },
-  ddd: { type: String, default: '' },
-  phone: { type: String, default: '' },
-  clinic_name: { type: String, default: '' },
-  cnpj: { type: String, default: '' },
-  crm: { type: String, default: '' },
-  source: { type: String, default: 'site' },
-  status: { type: String, default: 'new', enum: ['new', 'contacted', 'qualified', 'closed'] },
-  created_at: { type: String, required: true },
-}, { _id: false });
-
-clinicLeadSchema.index({ email: 1, created_at: -1 });
-clinicLeadSchema.index({ cnpj: 1, created_at: -1 });
-
-const medHubMarketplaceCacheSchema = new mongoose.Schema({
-  _id: { type: String, required: true }, // city|state normalized
-  city: { type: String, required: true },
-  state: { type: String, required: true },
-  center_lat: { type: Number, required: true },
-  center_lon: { type: Number, required: true },
-  fetched_at: { type: String, required: true },
-  items: { type: [mongoose.Schema.Types.Mixed], default: [] },
-}, { _id: false });
-
-medHubMarketplaceCacheSchema.index({ fetched_at: -1 });
-
-const medHubCertificationSchema = new mongoose.Schema({
-  _id: { type: String, required: true }, // user_id
-  type: { type: String, enum: ['clinic', 'doctor', 'both'], required: true },
-  // Dados profissionais obrigatórios
-  contact_phone: { type: String, default: null },
-  clinic_city: { type: String, default: null },
-  clinic_state: { type: String, default: null },
-  clinic_address: { type: String, default: null },
-  // Dados de clínica (CNPJ)
-  cnpj: { type: String, default: null },
-  cnpj_company_name: { type: String, default: null },
-  cnpj_situation: { type: String, default: null },
-  cnpj_activity: { type: String, default: null },
-  cnpj_verified_at: { type: String, default: null },
-  // Dados de médico (CRM)
-  crm_number: { type: String, default: null },
-  crm_state: { type: String, default: null },
-  crm_name: { type: String, default: null },
-  crm_specialty: { type: String, default: null },
-  crm_verified_at: { type: String, default: null },
-  // Status geral
-  status: { type: String, enum: ['pending', 'verifying', 'approved', 'rejected'], default: 'pending' },
-  rejection_reason: { type: String, default: null },
-  created_at: { type: String, required: true },
-  updated_at: { type: String, required: true },
-  verified_at: { type: String, default: null },
-}, { _id: false });
-
-medHubCertificationSchema.index({ status: 1, created_at: -1 });
-
 // ── Models ────────────────────────────────────────────────────────────────────
 
 function getModel(name, schema) {
@@ -406,10 +290,6 @@ function getDatabase() {
     studySummaries: getModel('StudySummary', studySummarySchema),
     mnemonics: getModel('Mnemonic', mnemonicSchema),
     mockExamResults: getModel('MockExamResult', mockExamResultSchema),
-    medHubWorkspaces: getModel('MedHubWorkspace', medHubWorkspaceSchema),
-    clinicLeads: getModel('ClinicLead', clinicLeadSchema),
-    medHubMarketplaceCache: getModel('MedHubMarketplaceCache', medHubMarketplaceCacheSchema),
-    medHubCertifications: getModel('MedHubCertification', medHubCertificationSchema),
   };
 }
 
