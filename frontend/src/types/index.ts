@@ -34,9 +34,21 @@ export interface PlannerItem {
   updated_at: string;
 }
 
+export interface FlashcardDeck {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  description: string;
+  card_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Flashcard {
   id: string;
   user_id: string;
+  deck_id: string | null;
   subject: string;
   question: string;
   answer: string;

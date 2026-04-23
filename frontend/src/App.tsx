@@ -21,6 +21,7 @@ import Upgrade from './pages/app/Upgrade';
 import PaymentSuccess from './pages/app/PaymentSuccess';
 import JarvisPage from './pages/app/Jarvis';
 import MindMapPage from './pages/app/MindMap';
+import QuestionBankPage from './pages/app/QuestionBank';
 import ReminderSessionPage from './pages/app/ReminderSession';
 import PomodoroPage from './pages/app/Pomodoro';
 import Blocked from './pages/app/Blocked';
@@ -197,6 +198,20 @@ export default function App() {
                 <BlockedGuard>
                   <AppLayout>
                     <Settings />
+                  </AppLayout>
+                </BlockedGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/question-bank"
+            element={
+              <ProtectedRoute>
+                <BlockedGuard>
+                  <AppLayout>
+                    <PremiumGuard feature="Banco de Questões">
+                      <QuestionBankPage />
+                    </PremiumGuard>
                   </AppLayout>
                 </BlockedGuard>
               </ProtectedRoute>

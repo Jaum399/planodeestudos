@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Layers, Calendar, BarChart2,
-  Settings, LogOut, Menu, BrainCircuit, Zap, Crown, Map, Bot, Sun, Moon, Languages, Bell, Timer, X, Volume2, VolumeX
+  Settings, LogOut, Menu, BrainCircuit, Zap, Crown, Map, Bot, Sun, Moon, Languages, Bell, Timer, X, Volume2, VolumeX, GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePreferences } from '../contexts/PreferencesContext';
@@ -49,6 +49,7 @@ const navItems = [
   { path: '/app/dashboard', labelKey: 'nav_dashboard', icon: LayoutDashboard },
   { path: '/app/planner', labelKey: 'nav_planner', icon: Layers, premium: true },
   { path: '/app/flashcards', labelKey: 'nav_flashcards', icon: BookOpen, premium: true },
+  { path: '/app/question-bank', labelKey: 'nav_question_bank', icon: GraduationCap, premium: true },
   { path: '/app/schedule', labelKey: 'nav_schedule', icon: Calendar, premium: true },
   { path: '/app/analytics', labelKey: 'nav_analytics', icon: BarChart2, premium: true },
   { path: '/app/jarvis', labelKey: 'nav_tigas', icon: Bot, premium: true },

@@ -61,15 +61,25 @@ export const plannerApi = {
 
 // Flashcards
 export const flashcardsApi = {
-  getAll: () => api.get('/flashcards'),
-  getReview: () => api.get('/flashcards/review'),
-  create: (data: { subject: string; question: string; answer: string }) =>
+  getAll: (deckId?: string | null) => api.get('/flashcards', { params: deckId ? { deck_id: deckId } : {} }),
+  getReview: (deckId?: string | null) => api.get('/flashcards/review', { params: deckId ? { deck_id: deckId } : {} }),
+  create: (data: { subject: string; question: string; answer: string; deck_id?: string | null }) =>
     api.post('/flashcards', data),
   review: (id: string, difficulty: number) =>
     api.put(`/flashcards/${id}/review`, { difficulty }),
-  update: (id: string, data: { subject?: string; question?: string; answer?: string }) =>
+  update: (id: string, data: { subject?: string; question?: string; answer?: string; deck_id?: string | null }) =>
     api.put(`/flashcards/${id}`, data),
   delete: (id: string) => api.delete(`/flashcards/${id}`),
+};
+
+// Flashcard Decks
+export const flashcardDecksApi = {
+  getAll: () => api.get('/flashcard-decks'),
+  create: (data: { name: string; color?: string; description?: string }) =>
+    api.post('/flashcard-decks', data),
+  update: (id: string, data: { name?: string; color?: string; description?: string }) =>
+    api.put(`/flashcard-decks/${id}`, data),
+  delete: (id: string) => api.delete(`/flashcard-decks/${id}`),
 };
 
 // Schedule

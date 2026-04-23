@@ -44,7 +44,11 @@ function calculateNextReview(difficulty, easeFactor, intervalDays) {
 // GET /api/flashcards
 router.get('/', async (req, res) => {
   const { flashcards } = getDatabase();
-  const cards = await flashcards.find({ user_id: req.user.id }).sort({ created_at: -1 });
+  const query = { user_id: req.user.id };
+  if (req.query.deck_id) {
+    query.deck_id = req.query.deck_id === 'none' ? null : req.query.deck_id;
+  }
+  const cards = await flashcards.find(query).sort({ created_at: -1 });
   res.json({ cards: cards.map(toCard) });
 });
 
@@ -52,7 +56,11 @@ router.get('/', async (req, res) => {
 router.get('/review', async (req, res) => {
   const { flashcards } = getDatabase();
   const today = new Date().toISOString().split('T')[0];
-  const all = await flashcards.find({ user_id: req.user.id });
+  const query = { user_id: req.user.id };
+  if (req.query.deck_id) {
+    query.deck_id = req.query.deck_id === 'none' ? null : req.query.deck_id;
+  }
+  const all = await flashcards.find(query);
   const cards = all
     .filter(c => !c.next_review || c.next_review <= today)
     .sort((a, b) => (a.next_review || '') < (b.next_review || '') ? -1 : 1)
@@ -76,6 +84,7 @@ router.post('/', async (req, res) => {
     const card = new flashcards({
       _id: uuidv4(),
       user_id: req.user.id,
+      deck_id: req.body.deck_id || null,
       subject: subject.trim(),
       question: question.trim(),
       answer: answer.trim(),
@@ -153,6 +162,7 @@ router.put('/:id', async (req, res) => {
         subject: subject || card.subject,
         question: question || card.question,
         answer: answer || card.answer,
+        deck_id: req.body.deck_id !== undefined ? req.body.deck_id : card.deck_id,
         updated_at: new Date().toISOString(),
       }},
       { new: true }

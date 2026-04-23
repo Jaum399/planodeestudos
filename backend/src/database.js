@@ -105,9 +105,20 @@ const plannerSchema = new mongoose.Schema({
   updated_at: { type: String },
 }, { _id: false });
 
+const flashcardDeckSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  name: { type: String, required: true },
+  color: { type: String, default: '#7c3aed' },
+  description: { type: String, default: '' },
+  created_at: { type: String },
+  updated_at: { type: String },
+}, { _id: false });
+
 const flashcardSchema = new mongoose.Schema({
   _id: { type: String, required: true },
   user_id: { type: String, required: true },
+  deck_id: { type: String, default: null },
   subject: { type: String, required: true },
   question: { type: String, required: true },
   answer: { type: String, required: true },
@@ -279,6 +290,7 @@ function getDatabase() {
     users:      getModel('User', userSchema),
     planner:    getModel('Planner', plannerSchema),
     flashcards: getModel('Flashcard', flashcardSchema),
+    flashcardDecks: getModel('FlashcardDeck', flashcardDeckSchema),
     schedule:   getModel('Schedule', scheduleSchema),
     sessions:   getModel('Session', sessionSchema),
     jarvis:     getModel('Jarvis', jarvisSchema),
