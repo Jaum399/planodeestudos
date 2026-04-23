@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import {
   BrainCircuit, Zap, Calendar, Layers, BookOpen, BarChart2,
   Smartphone, CheckCircle2, Star, ArrowRight, Shield, Clock, Award,
-  Bell, Laptop, Phone, TrendingUp, Users, ChevronDown
+  Bell, Laptop, Phone, TrendingUp, Users, ChevronDown,
+  MessageSquare, Sparkles, Send
 } from 'lucide-react';
 import LandingNavbar from '../components/LandingNavbar';
 
@@ -69,6 +70,55 @@ const flashcards = [
   { category: 'MatemÃ¡tica', question: 'Qual a fÃ³rmula da progressÃ£o geomÃ©trica?', answer: 'an = a1 Ã— q^(n-1), onde q Ã© a razÃ£o e a1 o primeiro termo.' },
 ];
 
+interface JarvisMsg { from: 'user' | 'ai'; text?: string; list?: string[]; }
+const jarvisScenarios: { label: string; messages: JarvisMsg[] }[] = [
+  {
+    label: 'No ônibus 🚌',
+    messages: [
+      { from: 'user', text: 'Oi Jarvis, tenho 20 minutos. O que revisar?' },
+      { from: 'ai', text: 'Com base no seu histórico, 3 matérias estão no ponto ideal hoje:' },
+      { from: 'ai', list: ['🫀 Cardiologia — última revisão há 3 dias', '🧠 Neurologia — 2 flashcards pendentes', '🦠 Microbiologia — 85% de esquecimento previsto'] },
+      { from: 'ai', text: 'Inicio os flashcards de Cardiologia agora? 👇' },
+    ],
+  },
+  {
+    label: 'Antes da prova 📚',
+    messages: [
+      { from: 'user', text: 'Jarvis, minha prova de Cardiologia é amanhã.' },
+      { from: 'ai', text: 'Entendido! Aqui está seu plano de revisão express de 2 horas:' },
+      { from: 'ai', list: ['⏱ 20min — Síndromes Coronarianas (revisão rápida)', '⏱ 30min — Flashcards: ECG + Arritmias', '⏱ 40min — 20 questões nos seus pontos fracos', '⏱ 30min — Revisão das questões erradas'] },
+      { from: 'ai', text: 'Vai dormir cedo. A memória consolida no sono 🌙' },
+    ],
+  },
+  {
+    label: 'Após simulado 📊',
+    messages: [
+      { from: 'user', text: 'Acabei o simulado. Errei demais em Neurologia 😞' },
+      { from: 'ai', text: 'Vi seu resultado! Você acertou 48% em Neuro. Os pontos críticos foram:' },
+      { from: 'ai', list: ['❌ Síndromes Vasculares — 38% de acerto', '❌ Epilepsias — 42% de acerto', '❌ Desmielinizantes — 51% de acerto'] },
+      { from: 'ai', text: 'Já agendei revisões extras para os próximos 5 dias. Vamos recuperar! 💪' },
+    ],
+  },
+  {
+    label: 'Falta 1 semana ⏰',
+    messages: [
+      { from: 'user', text: 'Jarvis, minha residência é em 7 dias. Estou em pânico.' },
+      { from: 'ai', text: 'Respira! Aqui está seu plano de choque baseado no seu histórico:' },
+      { from: 'ai', list: ['📅 Dias 1-3: Matérias com maior peso no edital', '📅 Dias 4-5: Revisão dos seus pontos fracos', '📅 Dia 6: Simulado geral + revisão dos erros', '📅 Dia 7: Revisão leve + descanso. Você merece!'] },
+      { from: 'ai', text: 'Você estudou pra isso. Confia no processo! 🚀' },
+    ],
+  },
+  {
+    label: 'Sexta à noite 🌙',
+    messages: [
+      { from: 'user', text: 'É sexta, to cansado mas quero estudar algo leve.' },
+      { from: 'ai', text: 'Perfeito para manutenção! Aqui vai um plano de 30 minutos leves:' },
+      { from: 'ai', list: ['🃏 15 flashcards do assunto que você mais curte', '🎯 5 questões fáceis para manter o ritmo', '✅ Marcar o progresso da semana no planner'] },
+      { from: 'ai', text: 'Você estudou 4h42min essa semana. Descansa com consciência limpa! 😄' },
+    ],
+  },
+];
+
 // Animated counter hook
 function useCountUp(target: number, isVisible: boolean) {
   const [count, setCount] = useState(0);
@@ -97,6 +147,8 @@ export default function Landing() {
   const [fcFlipped, setFcFlipped] = useState(false);
   const [counterVisible, setCounterVisible] = useState(false);
   const [showExtraFeatures, setShowExtraFeatures] = useState(false);
+  const [jarvisScenario, setJarvisScenario] = useState(0);
+  const [jarvisStep, setJarvisStep] = useState(0);
   const counterRef = useRef<HTMLDivElement>(null);
   const studentsCount = useCountUp(5000, counterVisible);
 
@@ -134,6 +186,17 @@ export default function Landing() {
     if (counterRef.current) obs.observe(counterRef.current);
     return () => obs.disconnect();
   }, []);
+
+  // Jarvis chat animation
+  useEffect(() => {
+    setJarvisStep(0);
+    const msgs = jarvisScenarios[jarvisScenario].messages;
+    const timers: number[] = [];
+    msgs.forEach((_, i) => {
+      timers.push(window.setTimeout(() => setJarvisStep(s => Math.max(s, i + 1)), (i + 1) * 900));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [jarvisScenario]);
 
   const colorMap: Record<string, string> = {
     blue: 'bg-blue-500/20 border-blue-500/30 text-blue-300',
@@ -356,6 +419,160 @@ export default function Landing() {
       </section>
 
       {/* â”€â”€ FEATURES BENTO GRID â”€â”€ */}
+      <section id="jarvis" className="py-20 md:py-28 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-violet-900/20 rounded-full blur-[100px]" />
+          <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-primary-900/20 rounded-full blur-[80px]" />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-violet-600/10 border border-violet-600/20 rounded-xl px-3 py-1.5 mb-4">
+              <Sparkles size={13} className="text-violet-400" />
+              <span className="text-violet-300 text-xs font-semibold">Assistente IA conversacional</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4">
+              Tony Stark tem o Jarvis.<br />
+              <span className="gradient-text">Você tem o Mentoris.</span>
+            </h2>
+            <p className="section-subtitle max-w-xl mx-auto">
+              Converse com nossa IA e ela organiza tudo por você — cronograma, revisões, flashcards. Só mandando uma mensagem.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-10 lg:gap-16 items-start">
+            {/* Left: scenario selector + benefits */}
+            <div>
+              <p className="text-gray-400 text-sm font-medium mb-4">Escolha um cenário e veja a IA em ação:</p>
+              <div className="flex flex-wrap gap-2 mb-10">
+                {jarvisScenarios.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setJarvisScenario(i)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                      i === jarvisScenario
+                        ? 'bg-primary-600 border-primary-500 text-white shadow-lg shadow-primary-900/40'
+                        : 'bg-app-card border-app-border text-gray-400 hover:text-white hover:border-gray-600'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-5">
+                {[
+                  { icon: MessageSquare, title: 'Converse naturalmente', desc: 'Fale com o Jarvis como você falaria com um amigo. Sem comandos complicados.' },
+                  { icon: BrainCircuit, title: 'Ele conhece seu histórico', desc: 'O Jarvis sabe o que você estudou, errou e quanto tempo tem disponível.' },
+                  { icon: Sparkles, title: 'Age por você', desc: 'Ele não só responde — ele agenda revisões, cria flashcards e reorganiza seu planner.' },
+                  { icon: Bell, title: 'Proativo, não reativo', desc: 'Antes de você perguntar, ele já te avisa o que revisar para a prova de amanhã.' },
+                ].map(({ icon: Icon, title, desc }, i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="w-9 h-9 rounded-xl bg-primary-600/10 border border-primary-600/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Icon size={16} className="text-primary-400" />
+                    </div>
+                    <div>
+                      <p className="text-white text-sm font-semibold mb-0.5">{title}</p>
+                      <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: chat phone mockup */}
+            <div className="flex justify-center">
+              <div className="relative w-full max-w-sm">
+                <div className="absolute inset-0 bg-violet-600/15 rounded-3xl blur-2xl scale-105" />
+                <div className="relative bg-app-card border border-app-border rounded-3xl overflow-hidden shadow-2xl">
+
+                  {/* Chat header */}
+                  <div className="flex items-center gap-3 px-5 py-4 border-b border-app-border bg-app-surface/60">
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-600 to-primary-600 flex items-center justify-center">
+                        <BrainCircuit size={18} className="text-white" />
+                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-app-card" />
+                    </div>
+                    <div>
+                      <p className="text-white text-sm font-bold">Jarvis IA</p>
+                      <p className="text-emerald-400 text-xs">online agora</p>
+                    </div>
+                    <div className="ml-auto flex gap-1.5">
+                      <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
+                      <div className="w-2.5 h-2.5 bg-yellow-500/60 rounded-full" />
+                      <div className="w-2.5 h-2.5 bg-emerald-500/60 rounded-full" />
+                    </div>
+                  </div>
+
+                  {/* Messages area */}
+                  <div className="p-4 space-y-3 min-h-[320px] max-h-[320px] overflow-y-auto">
+                    {jarvisScenarios[jarvisScenario].messages.map((msg, i) => {
+                      if (i >= jarvisStep) return null;
+                      if (msg.from === 'user') {
+                        return (
+                          <div key={`${jarvisScenario}-${i}`} className="flex justify-end animate-fade-in">
+                            <div className="max-w-[82%] bg-primary-600 text-white text-xs rounded-2xl rounded-tr-sm px-3.5 py-2.5 leading-relaxed shadow-lg shadow-primary-900/30">
+                              {msg.text}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={`${jarvisScenario}-${i}`} className="flex gap-2.5 animate-fade-in">
+                          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-600 to-primary-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <BrainCircuit size={11} className="text-white" />
+                          </div>
+                          <div className="max-w-[82%]">
+                            {msg.text && (
+                              <div className="bg-app-surface border border-white/5 text-gray-200 text-xs rounded-2xl rounded-tl-sm px-3.5 py-2.5 leading-relaxed mb-1">
+                                {msg.text}
+                              </div>
+                            )}
+                            {msg.list && (
+                              <div className="bg-app-surface border border-white/5 rounded-2xl rounded-tl-sm px-3.5 py-3 space-y-2">
+                                {msg.list.map((item, li) => (
+                                  <p key={li} className="text-gray-300 text-xs leading-relaxed">{item}</p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {jarvisStep < jarvisScenarios[jarvisScenario].messages.length &&
+                      jarvisScenarios[jarvisScenario].messages[jarvisStep]?.from === 'ai' && (
+                      <div className="flex gap-2.5 animate-fade-in">
+                        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-600 to-primary-600 flex items-center justify-center flex-shrink-0">
+                          <BrainCircuit size={11} className="text-white" />
+                        </div>
+                        <div className="bg-app-surface border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Chat input */}
+                  <div className="px-4 pb-4 pt-2 border-t border-app-border">
+                    <div className="flex items-center gap-2 bg-app-surface border border-app-border rounded-2xl px-3.5 py-2.5">
+                      <input readOnly placeholder="Pergunte ao Jarvis..." className="flex-1 bg-transparent text-gray-400 text-xs outline-none placeholder:text-gray-600 cursor-default" />
+                      <button className="w-7 h-7 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0 hover:bg-primary-500 transition-colors">
+                        <Send size={12} className="text-white" />
+                      </button>
+                    </div>
+                    <p className="text-center text-gray-600 text-[10px] mt-2">Demo interativo — clique nos cenários acima</p>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="features" className="py-8 md:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
