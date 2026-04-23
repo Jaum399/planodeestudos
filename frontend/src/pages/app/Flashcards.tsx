@@ -79,7 +79,7 @@ export default function Flashcards() {
 
   const handleCreate = async () => {
     if (!form.subject.trim() || !form.question.trim() || !form.answer.trim()) {
-      setCreateError('Todos os campos sÃ£o obrigatÃ³rios.');
+      setCreateError('Todos os campos são obrigatórios.');
       return;
     }
     setCreating(true);
@@ -137,7 +137,7 @@ export default function Flashcards() {
   };
 
   const handleDeleteDeck = async (deck: FlashcardDeck) => {
-    if (!confirm(`Excluir deck "${deck.name}"? Os cards serÃ£o movidos para Sem Categoria.`)) return;
+    if (!confirm(`Excluir deck "${deck.name}"? Os cards serão movidos para Sem Categoria.`)) return;
     try {
       await flashcardDecksApi.delete(deck.id);
       if (selectedDeck === deck.id) setSelectedDeck(null);
@@ -151,9 +151,9 @@ export default function Flashcards() {
 
   const diffLabel = (d: number) => {
     if (d === 0) return { text: 'Novo', color: 'text-gray-400' };
-    if (d === 1) return { text: 'DifÃ­cil', color: 'text-red-400' };
-    if (d === 2) return { text: 'MÃ©dio', color: 'text-yellow-400' };
-    return { text: 'FÃ¡cil', color: 'text-emerald-400' };
+    if (d === 1) return { text: 'Difícil', color: 'text-red-400' };
+    if (d === 2) return { text: 'Médio', color: 'text-yellow-400' };
+    return { text: 'Fácil', color: 'text-emerald-400' };
   };
 
   const activeDeckName = selectedDeck === null
@@ -168,7 +168,7 @@ export default function Flashcards() {
 
   return (
     <div className="flex gap-4 animate-fade-in min-h-0">
-      {/* â”€â”€ DECK SIDEBAR â”€â”€ */}
+      {/* Deck sidebar */}
       <div className={`transition-all duration-300 ${showDeckPanel ? 'w-56 min-w-[14rem]' : 'w-0 overflow-hidden'}`}>
         {showDeckPanel && (
           <div className="card-glass rounded-2xl p-3 space-y-1 h-fit">
@@ -275,7 +275,7 @@ export default function Flashcards() {
         )}
       </div>
 
-      {/* â”€â”€ MAIN CONTENT â”€â”€ */}
+      {/* Main content */}
       <div className="flex-1 min-w-0 space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
@@ -295,7 +295,7 @@ export default function Flashcards() {
                 </span>
               )}
             </div>
-            <p className="text-gray-400 text-sm mt-0.5">RevisÃ£o espaÃ§ada com SM-2 Â· {allCards.length} cards</p>
+            <p className="text-gray-400 text-sm mt-0.5">Revisão espaçada com SM-2 · {allCards.length} cards</p>
           </div>
         </div>
 
@@ -324,7 +324,7 @@ export default function Flashcards() {
           </div>
         ) : (
           <>
-            {/* â”€â”€ REVIEW TAB â”€â”€ */}
+            {/* Review tab */}
             {tab === 'review' && (
               <div className="max-w-lg mx-auto">
                 {reviewCards.length === 0 || currentIdx >= reviewCards.length ? (
@@ -333,12 +333,12 @@ export default function Flashcards() {
                       <Check size={28} className="text-emerald-400" />
                     </div>
                     <h3 className="text-white font-bold text-xl mb-2">
-                      {reviewCards.length === 0 ? 'Nenhum card para revisar!' : 'RevisÃ£o concluÃ­da! ðŸŽ‰'}
+                      {reviewCards.length === 0 ? 'Nenhum card para revisar!' : 'Revisão concluída! 🎉'}
                     </h3>
                     <p className="text-gray-400 text-sm mb-4">
                       {reviewCards.length === 0
-                        ? 'Crie flashcards para comeÃ§ar a revisar.'
-                        : `VocÃª revisou ${reviewed} card(s). Continue assim!`}
+                        ? 'Crie flashcards para começar a revisar.'
+                        : `Você revisou ${reviewed} card(s). Continue assim!`}
                     </p>
                     {reviewed > 0 && (
                       <button onClick={() => { setCurrentIdx(0); setReviewed(0); loadAll(); }} className="btn-secondary text-sm py-2 px-5">
@@ -383,7 +383,7 @@ export default function Flashcards() {
                     </div>
 
                     <div className={`grid grid-cols-3 gap-3 transition-opacity duration-300 ${flipped ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
-                      <button onClick={() => handleRate(0)} className="py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 text-sm font-semibold hover:bg-red-500/25 transition-all">NÃ£o sabia</button>
+                      <button onClick={() => handleRate(0)} className="py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 text-sm font-semibold hover:bg-red-500/25 transition-all">Não sabia</button>
                       <button onClick={() => handleRate(2)} className="py-3 rounded-xl bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 text-sm font-semibold hover:bg-yellow-500/25 transition-all">Quase</button>
                       <button onClick={() => handleRate(3)} className="py-3 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-sm font-semibold hover:bg-emerald-500/25 transition-all">Sabia!</button>
                     </div>
@@ -393,12 +393,12 @@ export default function Flashcards() {
               </div>
             )}
 
-            {/* â”€â”€ ALL TAB â”€â”€ */}
+            {/* All tab */}
             {tab === 'all' && (
               <div className="space-y-4">
                 <input
                   className="input-field max-w-xs"
-                  placeholder="Buscar por matÃ©ria..."
+                  placeholder="Buscar por matéria..."
                   value={searchSub}
                   onChange={e => setSearchSub(e.target.value)}
                 />
@@ -435,7 +435,7 @@ export default function Flashcards() {
                           <div className="flex items-center justify-between mt-3 text-[10px]">
                             <span className={dl.color}>{dl.text}</span>
                             <span className="text-gray-700">{card.review_count} rev.</span>
-                            <span className="text-gray-700">PrÃ³x: {card.next_review ? new Date(card.next_review + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : 'Hoje'}</span>
+                            <span className="text-gray-700">Próx: {card.next_review ? new Date(card.next_review + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : 'Hoje'}</span>
                           </div>
                         </div>
                       );
@@ -445,7 +445,7 @@ export default function Flashcards() {
               </div>
             )}
 
-            {/* â”€â”€ CREATE TAB â”€â”€ */}
+            {/* Create tab */}
             {tab === 'create' && (
               <div className="max-w-lg mx-auto">
                 <div className="card-glass rounded-2xl p-6 card-glow space-y-4">
@@ -474,7 +474,7 @@ export default function Flashcards() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-gray-400 text-xs font-medium mb-1.5">MatÃ©ria</label>
+                    <label className="block text-gray-400 text-xs font-medium mb-1.5">Matéria</label>
                     <input
                       className="input-field"
                       placeholder="Ex: Cardiologia"
@@ -487,7 +487,7 @@ export default function Flashcards() {
                     <textarea
                       className="input-field resize-none"
                       rows={3}
-                      placeholder="Ex: Quais sÃ£o os critÃ©rios de Framingham?"
+                      placeholder="Ex: Quais são os critérios de Framingham?"
                       value={form.question}
                       onChange={e => setForm(p => ({ ...p, question: e.target.value }))}
                     />

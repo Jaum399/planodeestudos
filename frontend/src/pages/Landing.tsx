@@ -9,65 +9,65 @@ import {
 import LandingNavbar from '../components/LandingNavbar';
 
 const areas = [
-  'Faculdade', 'ResidÃªncia MÃ©dica', 'OAB', 'ENEM & Vestibulares',
-  'Concursos', 'Revalida', 'LÃ­nguas', 'PÃ³s-GraduaÃ§Ã£o', 'Militares',
-  'Magistratura', 'Medicina', 'Engenharia', 'Direito', 'AdministraÃ§Ã£o',
+  'Faculdade', 'Residência Médica', 'OAB', 'ENEM & Vestibulares',
+  'Concursos', 'Revalida', 'Línguas', 'Pós-Graduação', 'Militares',
+  'Magistratura', 'Medicina', 'Engenharia', 'Direito', 'Administração',
 ];
 
 const testimonials = [
-  { handle: '@lucas_med', role: 'ResidÃªncia USP', text: 'Lembretes automÃ¡ticos salvaram minha vida na revisÃ£o de Anatomia. Aprovado! ðŸ©º', stars: 5 },
-  { handle: '@adv.carol', role: 'Aprovada OAB', text: 'Passei de primeira na OAB! O cronograma focou sÃ³ no que eu errava. Surreal.', stars: 5 },
-  { handle: '@jÃºlia.estuda', role: 'Medicina Federal', text: 'SaÃ­ de 600 pra 940 na mÃ©dia geral. A IA organizou toda a minha bagunÃ§a. â¤ï¸', stars: 5 },
-  { handle: '@thiago_rfb', role: 'Auditor Fiscal', text: 'Trabalho e estudo. O app ajustou meus horÃ¡rios perfeitamente. Nome no DOU! ðŸš€', stars: 5 },
-  { handle: '@eng.matheus', role: 'PolitÃ©cnica', text: 'CÃ¡lculo 3 finalmente saiu! A curva de esquecimento funciona mesmo.', stars: 5 },
+  { handle: '@lucas_med', role: 'Residência USP', text: 'Lembretes automáticos salvaram minha vida na revisão de Anatomia. Aprovado! 🩺', stars: 5 },
+  { handle: '@adv.carol', role: 'Aprovada OAB', text: 'Passei de primeira na OAB! O cronograma focou só no que eu errava. Surreal.', stars: 5 },
+  { handle: '@júlia.estuda', role: 'Medicina Federal', text: 'Saí de 600 pra 940 na média geral. A IA organizou toda a minha bagunça. ❤️', stars: 5 },
+  { handle: '@thiago_rfb', role: 'Auditor Fiscal', text: 'Trabalho e estudo. O app ajustou meus horários perfeitamente. Nome no DOU! 🚀', stars: 5 },
+  { handle: '@eng.matheus', role: 'Politécnica', text: 'Cálculo 3 finalmente saiu! A curva de esquecimento funciona mesmo.', stars: 5 },
   { handle: '@psi.ana', role: 'Psicologia PUC', text: 'Amei a interface! Consigo ver exatamente onde estou falhando. Recomendo dms!', stars: 5 },
 ];
 
 const planFeatures = [
-  'RevisÃµes inteligentes com IA (Curva de Hermann)',
+  'Revisões inteligentes com IA (Curva de Hermann)',
   'Planner validado por +5.000 estudantes',
   'Flashcards com IA',
-  'OrganizaÃ§Ã£o estilo Kanban',
-  'NotificaÃ§Ãµes automÃ¡ticas de revisÃ£o',
-  'SincronizaÃ§Ã£o de RevisÃµes com Provas',
-  'ImportaÃ§Ã£o de Edital com IA',
-  'IntegraÃ§Ã£o com Google Calendar',
-  'Cronograma semanal automÃ¡tico',
-  'Interface limpa e sem distraÃ§Ãµes',
+  'Organização estilo Kanban',
+  'Notificações automáticas de revisão',
+  'Sincronização de Revisões com Provas',
+  'Importação de Edital com IA',
+  'Integração com Google Calendar',
+  'Cronograma semanal automático',
+  'Interface limpa e sem distrações',
   'Analytics de desempenho com IA',
-  'Simulador de revisÃµes com IA',
+  'Simulador de revisões com IA',
 ];
 
 const planFeaturesExtra = [
-  'GeraÃ§Ã£o inteligente de horÃ¡rios',
-  'RevisÃµes dinÃ¢micas com desempenho',
-  'Banco de questÃµes integrado',
+  'Geração inteligente de horários',
+  'Revisões dinâmicas com desempenho',
+  'Banco de questões integrado',
   'Mapa mental com IA',
-  'Suporte prioritÃ¡rio',
+  'Suporte prioritário',
   'Acesso via mobile e desktop',
   'Lembretes por WhatsApp',
-  'RelatÃ³rios semanais automÃ¡ticos',
+  'Relatórios semanais automáticos',
 ];
 
 const plannerDays = [
-  { day: 'Segunda-feira', items: [{ sub: 'ClÃ­nica MÃ©dica', time: '1h30', color: 'blue' }, { sub: 'Psiquiatria', time: '1h30', color: 'blue' }, { sub: 'RevisÃ£o Flashcards', time: '45m', color: 'green' }] },
-  { day: 'TerÃ§a-feira', items: [{ sub: 'Cardiologia', time: '1h30', color: 'purple' }, { sub: 'Endocrinologia', time: '15m', color: 'gray' }, { sub: 'QuestÃµes SUS', time: '1h00', color: 'blue' }] },
+  { day: 'Segunda-feira', items: [{ sub: 'Clínica Médica', time: '1h30', color: 'blue' }, { sub: 'Psiquiatria', time: '1h30', color: 'blue' }, { sub: 'Revisão Flashcards', time: '45m', color: 'green' }] },
+  { day: 'Terça-feira', items: [{ sub: 'Cardiologia', time: '1h30', color: 'purple' }, { sub: 'Endocrinologia', time: '15m', color: 'gray' }, { sub: 'Questões SUS', time: '1h00', color: 'blue' }] },
   { day: 'Quarta-feira', items: [{ sub: 'Pediatria', time: '1h30', color: 'orange' }, { sub: 'Ginecologia', time: '1h30', color: 'green' }, { sub: 'Simulado', time: '2h00', color: 'blue' }] },
 ];
 
 const notifications = [
-  { time: 'agora', subject: 'Nefrologia', topic: 'SÃ­ndromes NefrÃ³ticas' },
-  { time: '2m', subject: 'Direito Constitucional', topic: 'PrincÃ­pios Fundamentais' },
+  { time: 'agora', subject: 'Nefrologia', topic: 'Síndromes Nefróticas' },
+  { time: '2m', subject: 'Direito Constitucional', topic: 'Princípios Fundamentais' },
   { time: '5m', subject: 'Ginecologia', topic: 'Sangramento Uterino' },
   { time: '10m', subject: 'Pediatria', topic: 'Marcos do desenvolvimento' },
-  { time: '15m', subject: 'LegislaÃ§Ã£o', topic: 'Estatuto do Servidor' },
+  { time: '15m', subject: 'Legislação', topic: 'Estatuto do Servidor' },
 ];
 
 const flashcards = [
-  { category: 'HistÃ³ria', question: 'Quem proclamou a independÃªncia do Brasil?', answer: 'Dom Pedro I, em 7 de setembro de 1822, Ã s margens do rio Ipiranga.' },
-  { category: 'Cardiologia', question: 'Quais sÃ£o os sinais clÃ¡ssicos de IAM?', answer: 'Dor precordial em aperto, irradiaÃ§Ã£o para braÃ§o esquerdo, sudorese e dispneia.' },
-  { category: 'Direito', question: 'O que Ã© o princÃ­pio da legalidade?', answer: 'NinguÃ©m Ã© obrigado a fazer ou deixar de fazer algo senÃ£o em virtude de lei (CF art. 5Â°, II).' },
-  { category: 'MatemÃ¡tica', question: 'Qual a fÃ³rmula da progressÃ£o geomÃ©trica?', answer: 'an = a1 Ã— q^(n-1), onde q Ã© a razÃ£o e a1 o primeiro termo.' },
+  { category: 'História', question: 'Quem proclamou a independência do Brasil?', answer: 'Dom Pedro I, em 7 de setembro de 1822, às margens do rio Ipiranga.' },
+  { category: 'Cardiologia', question: 'Quais são os sinais clássicos de IAM?', answer: 'Dor precordial em aperto, irradiação para braço esquerdo, sudorese e dispneia.' },
+  { category: 'Direito', question: 'O que é o princípio da legalidade?', answer: 'Ninguém é obrigado a fazer ou deixar de fazer algo senão em virtude de lei (CF art. 5°, II).' },
+  { category: 'Matemática', question: 'Qual a fórmula da progressão geométrica?', answer: 'an = a1 × q^(n-1), onde q é a razão e a1 o primeiro termo.' },
 ];
 
 interface JarvisMsg { from: 'user' | 'ai'; text?: string; list?: string[]; }
@@ -210,7 +210,7 @@ export default function Landing() {
     <div className="min-h-screen bg-app-bg overflow-x-hidden">
       <LandingNavbar />
 
-      {/* â”€â”€ HERO â”€â”€ */}
+      {/* Hero */}
       <section className="relative pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary-700/15 rounded-full blur-[100px]" />
@@ -219,20 +219,20 @@ export default function Landing() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Left â€” text */}
+            {/* Left text */}
             <div>
               <div className="inline-flex items-center gap-2 bg-primary-600/10 border border-primary-600/30 rounded-full px-4 py-1.5 mb-6">
                 <span className="w-2 h-2 bg-primary-400 rounded-full animate-pulse" />
-                <span className="text-primary-300 text-xs font-medium">âœ¨ Novo: RevisÃµes com IA integrada</span>
+                <span className="text-primary-300 text-xs font-medium">✨ Novo: Revisões com IA integrada</span>
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight public-heading mb-6">
-                O cÃ©rebro digital<br />
-                da sua <span className="gradient-text">aprovaÃ§Ã£o.</span>
+                O cérebro digital<br />
+                da sua <span className="gradient-text">aprovação.</span>
               </h1>
 
               <p className="text-gray-400 text-lg mb-8 leading-relaxed">
-                Unimos a ciÃªncia da <strong className="text-primary-300">Curva de Esquecimento</strong> com uma <strong className="text-white">IA avanÃ§ada</strong> para criar o sistema perfeito e garantir que vocÃª nunca esqueÃ§a o que estudou.
+                Unimos a ciência da <strong className="text-primary-300">Curva de Esquecimento</strong> com uma <strong className="text-white">IA avançada</strong> para criar o sistema perfeito e garantir que você nunca esqueça o que estudou.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -255,7 +255,7 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Right â€” phone mockup */}
+            {/* Right phone mockup */}
             <div className="relative flex justify-center">
               <div className="relative">
                 {/* Glow halo */}
@@ -277,7 +277,7 @@ export default function Landing() {
                     {/* App content */}
                     <div className="px-5 pb-6">
                       <div className="mb-3">
-                        <p className="text-gray-400 text-xs">OlÃ¡, Maria ðŸ‘‹</p>
+                        <p className="text-gray-400 text-xs">Olá, Maria 👋</p>
                         <p className="text-white font-bold text-sm">Seu plano de hoje</p>
                       </div>
 
@@ -291,15 +291,15 @@ export default function Landing() {
                           <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-bold">72%</span>
                         </div>
                         <div>
-                          <p className="text-white text-xs font-semibold">Meta diÃ¡ria</p>
-                          <p className="text-gray-400 text-[10px]">3/5 matÃ©rias revisadas</p>
+                          <p className="text-white text-xs font-semibold">Meta diária</p>
+                          <p className="text-gray-400 text-[10px]">3/5 matérias revisadas</p>
                         </div>
                       </div>
 
                       {/* Cards */}
                       {[
-                        { label: 'Nefrologia', tag: 'REVISÃƒO HOJE', urgent: true },
-                        { label: 'Cardiologia', tag: 'AMANHÃƒ', urgent: false },
+                        { label: 'Nefrologia', tag: 'REVISÃO HOJE', urgent: true },
+                        { label: 'Cardiologia', tag: 'AMANHÃ', urgent: false },
                         { label: 'Pediatria', tag: 'EM 3 DIAS', urgent: false },
                       ].map((item, i) => (
                         <div key={i} className={`flex items-center justify-between rounded-xl px-3 py-2.5 mb-2 border ${item.urgent ? 'bg-primary-600/20 border-primary-600/40' : 'bg-app-bg/60 border-white/5'}`}>
@@ -331,7 +331,7 @@ export default function Landing() {
                     </div>
                     <div>
                       <p className="text-white text-[10px] font-semibold">Hora de revisar!</p>
-                      <p className="text-gray-400 text-[9px]">Nefrologia â€¢ agora</p>
+                      <p className="text-gray-400 text-[9px]">Nefrologia • agora</p>
                     </div>
                   </div>
                 </div>
@@ -339,7 +339,7 @@ export default function Landing() {
                 {/* Floating streak badge */}
                 <div className="absolute -left-4 bottom-24 bg-app-card border border-orange-500/30 rounded-2xl px-3 py-2 shadow-xl animate-float" style={{ animationDelay: '1s' }}>
                   <div className="flex items-center gap-2">
-                    <span className="text-base">ðŸ”¥</span>
+                    <span className="text-base">🔥</span>
                     <div>
                       <p className="text-white text-[10px] font-bold">12 dias seguidos</p>
                       <p className="text-orange-400 text-[9px]">Continue assim!</p>
@@ -352,7 +352,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* â”€â”€ AREAS MARQUEE â”€â”€ */}
+      {/* Areas marquee */}
       <section className="py-6 border-y border-app-border overflow-hidden">
         <div className="flex gap-4" style={{ animation: 'marquee-slide 20s linear infinite' }}>
           {[...areas, ...areas].map((area, i) => (
@@ -363,7 +363,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* â”€â”€ SIMULADOR COGNITIVO â”€â”€ */}
+      {/* Simulador cognitivo */}
       <section id="simulador-section" className="py-20 md:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -372,14 +372,14 @@ export default function Landing() {
                 <BrainCircuit size={14} className="text-purple-400" />
                 <span className="text-purple-300 text-xs font-semibold">Simulador Cognitivo & IA</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Sua memÃ³ria, otimizada pela IA</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Sua memória, otimizada pela IA</h2>
               <p className="text-gray-400 text-base leading-relaxed mb-6">
-                Nossa IA analisa seu perfil psicolÃ³gico para criar uma curva de esquecimento Ãºnica para sua memÃ³ria. Resultado: vocÃª revisa menos, lembra mais.
+                Nossa IA analisa seu perfil psicológico para criar uma curva de esquecimento única para sua memória. Resultado: você revisa menos, lembra mais.
               </p>
               <div className="flex gap-6">
                 <div>
                   <p className="text-3xl font-black text-white">{retentionPct}%</p>
-                  <p className="text-gray-500 text-xs">RetenÃ§Ã£o Estimada</p>
+                  <p className="text-gray-500 text-xs">Retenção Estimada</p>
                 </div>
                 <div>
                   <p className="text-3xl font-black text-primary-400">IA</p>
@@ -391,7 +391,7 @@ export default function Landing() {
             {/* Graph card */}
             <div className="card-glass rounded-2xl p-6 card-glow">
               <div className="flex justify-between items-center mb-4">
-                <span className="text-white text-sm font-semibold">Sua MemÃ³ria</span>
+                <span className="text-white text-sm font-semibold">Sua Memória</span>
                 <span className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-semibold px-2.5 py-1 rounded-full">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" /> Ao vivo
                 </span>
@@ -410,15 +410,15 @@ export default function Landing() {
                 </svg>
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-2">
-                <span>Sem revisÃ£o</span>
-                <span className="text-primary-400 font-semibold">RevisÃ£o ideal: Hoje, 14h</span>
+                <span>Sem revisão</span>
+                <span className="text-primary-400 font-semibold">Revisão ideal: Hoje, 14h</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* â”€â”€ FEATURES BENTO GRID â”€â”€ */}
+      {/* Features bento grid */}
       <section id="jarvis" className="py-20 md:py-28 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-violet-900/20 rounded-full blur-[100px]" />
@@ -576,14 +576,14 @@ export default function Landing() {
       <section id="features" className="py-8 md:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="section-title">Tudo que vocÃª precisa para passar</h2>
-            <p className="section-subtitle">Ferramentas inteligentes que trabalham por vocÃª enquanto vocÃª foca no que importa.</p>
+            <h2 className="section-title">Tudo que você precisa para passar</h2>
+            <p className="section-subtitle">Ferramentas inteligentes que trabalham por você enquanto você foca no que importa.</p>
           </div>
 
           {/* Bento grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 
-            {/* 1 â€” Cronograma AutomÃ¡tico (wide) */}
+            {/* 1 - Cronograma Automático (wide) */}
             <div className="lg:col-span-2 card-glass rounded-2xl p-6 card-glow">
               <div className="flex flex-col md:flex-row gap-6 items-start">
                 <div className="flex-1">
@@ -591,8 +591,8 @@ export default function Landing() {
                     <Calendar size={13} className="text-primary-400" />
                     <span className="text-primary-300 text-xs font-semibold">IA analisa seu tempo livre</span>
                   </div>
-                  <h3 className="text-white text-xl font-bold mb-2">Cronograma AutomÃ¡tico</h3>
-                  <p className="text-gray-400 text-sm mb-4">A IA analisa seu tempo livre e distribui as matÃ©rias de forma inteligente. Nunca mais perca tempo fazendo grade manualmente.</p>
+                  <h3 className="text-white text-xl font-bold mb-2">Cronograma Automático</h3>
+                  <p className="text-gray-400 text-sm mb-4">A IA analisa seu tempo livre e distribui as matérias de forma inteligente. Nunca mais perca tempo fazendo grade manualmente.</p>
                   <button onClick={() => navigate('/register')} className="inline-flex items-center gap-1.5 text-primary-400 hover:text-primary-300 text-sm font-semibold transition-colors">
                     Gerar meu plano <ArrowRight size={14} />
                   </button>
@@ -626,14 +626,14 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* 2 â€” Flashcards com IA */}
+            {/* 2 - Flashcards com IA */}
             <div className="card-glass rounded-2xl p-6 card-glow">
               <div className="inline-flex items-center gap-2 bg-violet-600/10 border border-violet-600/20 rounded-xl px-3 py-1.5 mb-3">
                 <BookOpen size={13} className="text-violet-400" />
-                <span className="text-violet-300 text-xs font-semibold">RevisÃ£o rÃ¡pida e inteligente</span>
+                <span className="text-violet-300 text-xs font-semibold">Revisão rápida e inteligente</span>
               </div>
               <h3 className="text-white text-xl font-bold mb-2">Flashcards com IA</h3>
-              <p className="text-gray-400 text-sm mb-4">A IA gera flashcards das suas matÃ©rias automaticamente.</p>
+              <p className="text-gray-400 text-sm mb-4">A IA gera flashcards das suas matérias automaticamente.</p>
               {/* Flashcard interactive */}
               <div className="cursor-pointer" onClick={() => setFcFlipped(f => !f)}>
                 <div className="relative bg-app-bg/60 border border-white/5 rounded-2xl p-4 min-h-[110px] flex flex-col justify-between">
@@ -653,20 +653,20 @@ export default function Landing() {
               </div>
               {fcFlipped && (
                 <div className="flex gap-2 mt-3">
-                  <button onClick={() => { setFcIndex(i => (i + 1) % flashcards.length); setFcFlipped(false); }} className="flex-1 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold">NÃ£o sabia</button>
+                  <button onClick={() => { setFcIndex(i => (i + 1) % flashcards.length); setFcFlipped(false); }} className="flex-1 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold">Não sabia</button>
                   <button onClick={() => { setFcIndex(i => (i + 1) % flashcards.length); setFcFlipped(false); }} className="flex-1 py-2 rounded-xl bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs font-semibold">Quase</button>
                   <button onClick={() => { setFcIndex(i => (i + 1) % flashcards.length); setFcFlipped(false); }} className="flex-1 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold">Sabia!</button>
                 </div>
               )}
             </div>
 
-            {/* 3 â€” RevisÃ£o Inteligente (notifications) */}
+            {/* 3 - Revisão Inteligente (notifications) */}
             <div className="card-glass rounded-2xl p-6 card-glow">
               <div className="inline-flex items-center gap-2 bg-blue-600/10 border border-blue-600/20 rounded-xl px-3 py-1.5 mb-3">
                 <Bell size={13} className="text-blue-400" />
                 <span className="text-blue-300 text-xs font-semibold">Lembrete no momento certo</span>
               </div>
-              <h3 className="text-white text-xl font-bold mb-2">RevisÃ£o Inteligente</h3>
+              <h3 className="text-white text-xl font-bold mb-2">Revisão Inteligente</h3>
               <p className="text-gray-400 text-sm mb-4">Nosso algoritmo te lembra de revisar logo antes do esquecimento.</p>
               {/* Notification stack */}
               <div className="space-y-2">
@@ -685,13 +685,13 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* 4 â€” AnÃ¡lises Visuais */}
+            {/* 4 - Análises Visuais */}
             <div className="card-glass rounded-2xl p-6 card-glow">
               <div className="inline-flex items-center gap-2 bg-emerald-600/10 border border-emerald-600/20 rounded-xl px-3 py-1.5 mb-3">
                 <BarChart2 size={13} className="text-emerald-400" />
                 <span className="text-emerald-300 text-xs font-semibold">Acompanhe cada detalhe</span>
               </div>
-              <h3 className="text-white text-xl font-bold mb-4">AnÃ¡lises Visuais</h3>
+              <h3 className="text-white text-xl font-bold mb-4">Análises Visuais</h3>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-gray-400 text-xs">Meta Semanal</span>
@@ -701,7 +701,7 @@ export default function Landing() {
                   <div className="bg-gradient-to-r from-primary-600 to-primary-400 h-2 rounded-full" style={{ width: '82%' }} />
                 </div>
                 <div className="grid grid-cols-3 gap-2 mb-4">
-                  {[['76%', 'Acertos'], ['12ðŸ”¥', 'Dias streak'], ['42h', 'Estudadas']].map(([val, label], i) => (
+                  {[['76%', 'Acertos'], ['12🔥', 'Dias streak'], ['42h', 'Estudadas']].map(([val, label], i) => (
                     <div key={i} className="bg-app-bg/60 rounded-xl p-2.5 border border-white/5 text-center">
                       <p className="text-primary-400 font-bold text-sm">{val}</p>
                       <p className="text-gray-500 text-[10px]">{label}</p>
@@ -714,12 +714,12 @@ export default function Landing() {
                   ))}
                 </div>
                 <div className="flex justify-between text-[10px] text-gray-600 mt-1">
-                  {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b', 'Dom'].map(d => <span key={d}>{d}</span>)}
+                  {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(d => <span key={d}>{d}</span>)}
                 </div>
               </div>
             </div>
 
-            {/* 5 â€” Mobile & Desktop sync (wide) */}
+            {/* 5 - Mobile & Desktop sync (wide) */}
             <div className="lg:col-span-2 card-glass rounded-2xl p-6 card-glow">
               <div className="flex flex-col md:flex-row gap-6 items-center">
                 <div className="flex-1">
@@ -757,27 +757,27 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* 6 â€” Planner de Estudos (wide) */}
+            {/* 6 - Planner de Estudos (wide) */}
             <div className="lg:col-span-3 card-glass rounded-2xl p-6 card-glow overflow-hidden">
               <div className="flex flex-col md:flex-row gap-4 items-start mb-4">
                 <div>
                   <div className="inline-flex items-center gap-2 bg-primary-600/10 border border-primary-600/20 rounded-xl px-3 py-1.5 mb-2">
                     <Layers size={13} className="text-primary-400" />
-                    <span className="text-primary-300 text-xs font-semibold">OrganizaÃ§Ã£o estilo Kanban</span>
+                    <span className="text-primary-300 text-xs font-semibold">Organização estilo Kanban</span>
                   </div>
                   <h3 className="text-white text-xl font-bold">Planner de Estudos</h3>
-                  <p className="text-gray-400 text-sm">O mesmo planner que jÃ¡ ajudou +5.000 aprovados, agora melhorado com IA.</p>
+                  <p className="text-gray-400 text-sm">O mesmo planner que já ajudou +5.000 aprovados, agora melhorado com IA.</p>
                 </div>
               </div>
               {/* Scrolling topics */}
               <div className="overflow-x-auto">
                 <div className="flex gap-3 pb-2" style={{ width: 'max-content' }}>
                   {[
-                    { name: 'DoenÃ§as ExantemÃ¡ticas', tag: 'Pediatria', tagColor: 'purple', date: '15/01', diff: '7/10', pct: 82 },
-                    { name: 'ProgressÃ£o AritmÃ©tica', tag: 'MatemÃ¡tica II', tagColor: 'orange', date: '20/01', diff: '9/10', pct: 92 },
-                    { name: 'Cefaleias PrimÃ¡rias', tag: 'Neuro', tagColor: 'blue', date: '22/01', diff: '6/10', pct: 75 },
+                    { name: 'Doenças Exantemáticas', tag: 'Pediatria', tagColor: 'purple', date: '15/01', diff: '7/10', pct: 82 },
+                    { name: 'Progressão Aritmética', tag: 'Matemática II', tagColor: 'orange', date: '20/01', diff: '9/10', pct: 92 },
+                    { name: 'Cefaleias Primárias', tag: 'Neuro', tagColor: 'blue', date: '22/01', diff: '6/10', pct: 75 },
                     { name: 'Diabetes Mellitus', tag: 'Endocrino', tagColor: 'green', date: '25/01', diff: '8/10', pct: 65 },
-                    { name: 'AdministraÃ§Ã£o PÃºblica', tag: 'Constitucional', tagColor: 'purple', date: '28/01', diff: '7/10', pct: 80 },
+                    { name: 'Administração Pública', tag: 'Constitucional', tagColor: 'purple', date: '28/01', diff: '7/10', pct: 80 },
                     { name: 'Trauma Abdominal', tag: 'Cirurgia', tagColor: 'orange', date: '30/01', diff: '9/10', pct: 88 },
                   ].map((item, i) => (
                     <div key={i} className="w-56 bg-app-bg/60 border border-app-border rounded-2xl p-3 flex-shrink-0">
@@ -786,7 +786,7 @@ export default function Landing() {
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ml-2 ${item.tagColor === 'purple' ? 'bg-purple-500/20 text-purple-300' : item.tagColor === 'orange' ? 'bg-orange-500/20 text-orange-300' : item.tagColor === 'blue' ? 'bg-blue-500/20 text-blue-300' : 'bg-emerald-500/20 text-emerald-300'}`}>{item.tag}</span>
                       </div>
                       <div className="flex justify-between text-[10px] text-gray-500 mb-2">
-                        <span>ðŸ“… {item.date}</span>
+                        <span>📅 {item.date}</span>
                         <span>Dif: {item.diff}</span>
                       </div>
                       <div className="w-full bg-app-bg rounded-full h-1.5">
@@ -802,14 +802,14 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* â”€â”€ COUNTER â”€â”€ */}
+      {/* Counter */}
       <section ref={counterRef} className="py-16 md:py-20 bg-app-surface/40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8 text-center">
             {[
               { icon: Users, value: `+${studentsCount.toLocaleString('pt-BR')}`, label: 'alunos usam o Planner', color: 'text-primary-400' },
-              { icon: TrendingUp, value: '94%', label: 'de retenÃ§Ã£o mÃ©dia', color: 'text-emerald-400' },
-              { icon: Award, value: '+5k', label: 'aprovaÃ§Ãµes registradas', color: 'text-yellow-400' },
+              { icon: TrendingUp, value: '94%', label: 'de retenção média', color: 'text-emerald-400' },
+              { icon: Award, value: '+5k', label: 'aprovações registradas', color: 'text-yellow-400' },
             ].map(({ icon: Icon, value, label, color }, i) => (
               <div key={i} className="card-glass rounded-2xl p-8">
                 <div className={`w-12 h-12 rounded-2xl bg-current/10 flex items-center justify-center mx-auto mb-4 ${color}`} style={{ backgroundColor: 'rgba(var(--current), 0.1)' }}>
@@ -823,12 +823,12 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* â”€â”€ TESTIMONIALS â”€â”€ */}
+      {/* Testimonials */}
       <section id="testimonials" className="py-20 md:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <h2 className="section-title">Quem usou disse...</h2>
-            <p className="section-subtitle">O que alunos incrÃ­veis como vocÃª falaram.</p>
+            <p className="section-subtitle">O que alunos incríveis como você falaram.</p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -850,7 +850,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* â”€â”€ PRICING â”€â”€ */}
+      {/* Pricing */}
       <section id="pricing" className="py-20 md:py-28 bg-app-surface/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
@@ -867,14 +867,14 @@ export default function Landing() {
                 <div className="flex items-baseline gap-1">
                   <span className="text-gray-400 text-sm">R$</span>
                   <span className="text-4xl font-black text-white">29</span>
-                  <span className="text-gray-500 text-sm">/mÃªs</span>
+                  <span className="text-gray-500 text-sm">/mês</span>
                 </div>
-                <p className="text-gray-600 text-xs line-through mt-1">R$58/mÃªs</p>
+                <p className="text-gray-600 text-xs line-through mt-1">R$58/mês</p>
               </div>
               <button onClick={() => navigate('/register')} className="w-full py-3 rounded-xl border border-primary-600/50 text-primary-300 hover:bg-primary-600/10 font-semibold text-sm transition-all mb-2">
-                ComeÃ§ar agora
+                Começar agora
               </button>
-              <p className="text-gray-600 text-xs text-center">Acesso por 1 mÃªs</p>
+              <p className="text-gray-600 text-xs text-center">Acesso por 1 mês</p>
             </div>
 
             {/* Semestral */}
@@ -885,21 +885,21 @@ export default function Landing() {
                 <div className="flex items-baseline gap-1">
                   <span className="text-gray-400 text-sm">R$</span>
                   <span className="text-4xl font-black text-white">21</span>
-                  <span className="text-gray-500 text-sm">/mÃªs</span>
+                  <span className="text-gray-500 text-sm">/mês</span>
                 </div>
-                <p className="text-gray-600 text-xs line-through mt-1">R$42/mÃªs</p>
+                <p className="text-gray-600 text-xs line-through mt-1">R$42/mês</p>
                 <p className="text-emerald-400 text-xs font-medium mt-1">+ 10% OFF no PIX</p>
               </div>
               <button onClick={() => navigate('/register')} className="w-full py-3 rounded-xl border border-primary-600/50 text-primary-300 hover:bg-primary-600/10 font-semibold text-sm transition-all mb-2">
-                ComeÃ§ar agora
+                Começar agora
               </button>
               <p className="text-gray-600 text-xs text-center">Acesso por 6 meses</p>
             </div>
 
-            {/* Anual â€” popular */}
+            {/* Anual - popular */}
             <div className="relative rounded-2xl p-6 border border-primary-600/60" style={{ background: 'linear-gradient(135deg, #120d2e 0%, #1a0f3e 100%)' }}>
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="badge bg-primary-600 text-white px-4 py-1.5 text-xs">â­ Mais popular</span>
+                <span className="badge bg-primary-600 text-white px-4 py-1.5 text-xs">⭐ Mais popular</span>
               </div>
               <span className="badge bg-primary-600/30 text-primary-300 mb-2 inline-block">50% OFF</span>
               <h3 className="text-white text-xl font-bold mt-2">Anual</h3>
@@ -907,9 +907,9 @@ export default function Landing() {
                 <div className="flex items-baseline gap-1">
                   <span className="text-gray-400 text-sm">12x de R$</span>
                   <span className="text-4xl font-black text-white">16</span>
-                  <span className="text-gray-400 text-sm">/mÃªs</span>
+                  <span className="text-gray-400 text-sm">/mês</span>
                 </div>
-                <p className="text-gray-600 text-xs line-through mt-1">R$32/mÃªs</p>
+                <p className="text-gray-600 text-xs line-through mt-1">R$32/mês</p>
                 <p className="text-emerald-400 text-xs font-medium mt-1">+ 17% OFF no PIX</p>
                 <p className="text-primary-300 text-xs font-semibold mt-1">Menos de 60 centavos por dia!</p>
               </div>
@@ -922,7 +922,7 @@ export default function Landing() {
 
           {/* Features list */}
           <div className="mt-12 max-w-2xl mx-auto">
-            <p className="text-center text-gray-400 text-sm font-medium mb-6">Todos os planos liberam exatamente as mesmas funÃ§Ãµes:</p>
+            <p className="text-center text-gray-400 text-sm font-medium mb-6">Todos os planos liberam exatamente as mesmas funções:</p>
             <div className="grid sm:grid-cols-2 gap-2.5">
               {planFeatures.map((f, i) => (
                 <div key={i} className="flex items-center gap-2.5 text-sm text-gray-300">
@@ -955,7 +955,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* â”€â”€ FINAL CTA â”€â”€ */}
+      {/* Final CTA */}
       <section className="py-20 md:py-28 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-primary-700/20 rounded-full blur-[80px]" />
@@ -966,21 +966,21 @@ export default function Landing() {
             <span className="gradient-text">se organizando.</span>
           </h2>
           <p className="text-gray-400 text-lg mb-8 max-w-xl mx-auto">
-            Deixe a tecnologia cuidar da organizaÃ§Ã£o para vocÃª focar no que importa: <strong className="text-white">passar.</strong>
+            Deixe a tecnologia cuidar da organização para você focar no que importa: <strong className="text-white">passar.</strong>
           </p>
           <button onClick={() => navigate('/register')} className="btn-primary text-base px-10 py-4 glow-pulse">
             Quero ser aprovado
             <ArrowRight size={18} />
           </button>
           <div className="flex flex-wrap items-center justify-center gap-5 mt-6 text-sm text-gray-600">
-            <span>ðŸ”’ Compra Segura</span>
-            <span>â†© Garantia de 7 dias</span>
-            <span>âš¡ Suporte Premium</span>
+            <span>🔒 Compra Segura</span>
+            <span>✅ Garantia de 7 dias</span>
+            <span>💬 Suporte Premium</span>
           </div>
         </div>
       </section>
 
-      {/* â”€â”€ FOOTER â”€â”€ */}
+      {/* Footer */}
       <footer className="border-t border-app-border py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between gap-8">
@@ -992,7 +992,7 @@ export default function Landing() {
                 <span className="text-white font-bold">Mentoris</span>
               </div>
               <p className="text-gray-600 text-sm max-w-xs">
-                O aplicativo de organizaÃ§Ã£o de estudos mais simples, bonito e acessÃ­vel do mercado.
+                O aplicativo de organização de estudos mais simples, bonito e acessível do mercado.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-8">
@@ -1000,22 +1000,22 @@ export default function Landing() {
                 <h4 className="text-white text-sm font-semibold mb-3">Produto</h4>
                 <ul className="space-y-2 text-sm text-gray-500">
                   <li><a href="#features" className="hover:text-gray-300 transition-colors">Recursos</a></li>
-                  <li><a href="#pricing" className="hover:text-gray-300 transition-colors">PreÃ§os</a></li>
-                  <li><button onClick={() => navigate('/login')} className="hover:text-gray-300 transition-colors">JÃ¡ Ã© cliente? Acessar</button></li>
+                  <li><a href="#pricing" className="hover:text-gray-300 transition-colors">Preços</a></li>
+                  <li><button onClick={() => navigate('/login')} className="hover:text-gray-300 transition-colors">Já é cliente? Acessar</button></li>
                 </ul>
               </div>
               <div>
                 <h4 className="text-white text-sm font-semibold mb-3">Legal</h4>
                 <ul className="space-y-2 text-sm text-gray-500">
                   <li><a href="#" className="hover:text-gray-300 transition-colors">Termos de Uso</a></li>
-                  <li><a href="#" className="hover:text-gray-300 transition-colors">PolÃ­tica de Privacidade</a></li>
+                  <li><a href="#" className="hover:text-gray-300 transition-colors">Política de Privacidade</a></li>
                   <li><a href="mailto:contato@mentoriaestudantil.com.br" className="hover:text-gray-300 transition-colors">Contato</a></li>
                 </ul>
               </div>
             </div>
           </div>
           <div className="mt-10 pt-6 border-t border-app-border text-center text-gray-600 text-xs">
-            Â© {new Date().getFullYear()} Mentoris. Todos os direitos reservados.
+            © {new Date().getFullYear()} Mentoris. Todos os direitos reservados.
           </div>
         </div>
       </footer>
