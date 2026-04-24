@@ -1,0 +1,4 @@
+{"_id":"8c699b38-660f-4b92-922e-a0118f8d78ad","name":"Teste User","email":"teste@email.com","password":"$2a$12$b0iDX6Sjh9x1ZmJh7nRXm.3TilxEZWaMK1sFmlCE2/If6wneMN9.m","plan":"free","area":"","goal":"","weekly_goal_hours":20,"created_at":"2026-04-10T16:12:34.659Z","updated_at":"2026-04-10T16:12:34.659Z"}
+{"_id":"9c760ea7-ce62-4140-a664-8c1537e69fcd","name":"JOAO MARCELO DA SILVA FAGUNDES","email":"jmsfagundes@gmail.com","password":"$2a$12$pE7Tt1iE5gOYngD9Wmo6NeuMEGCes8Z5iQF0ejk8Cq.70xYdIQ4pi","plan":"free","area":"Engenharia","goal":"","weekly_goal_hours":20,"created_at":"2026-04-10T18:13:47.993Z","updated_at":"2026-04-10T18:13:47.993Z"}
+{"$$indexCreated":{"fieldName":"email","unique":true,"sparse":false}}
+{"$$indexCreated":{"fieldName":"email"}}

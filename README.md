@@ -5,7 +5,7 @@ Sistema completo de mentoria e auxílio aos estudos com frontend React e backend
 ## Estrutura
 
 ```
-├── backend/     - API Node.js + Express + SQLite
+├── backend/     - API Node.js + Express + MongoDB
 └── frontend/    - React + Vite + TypeScript + Tailwind CSS
 ```
 
@@ -65,6 +65,9 @@ O plano premium só é ativado após confirmação do pagamento (webhook/evento 
 Variáveis de ambiente necessárias no backend:
 
 ```bash
+MONGODB_URI=mongodb+srv://usuario:senha@cluster.mongodb.net/?appName=appmentoria
+PERSISTENCE_DRIVER=mongo
+ENABLE_FILE_DB_FALLBACK=false
 ASAAS_API_KEY=seu_token_do_asaas
 ASAAS_ENV=sandbox # ou production
 PREMIUM_MONTHLY_PRICE=49.90
@@ -118,5 +121,88 @@ Depois disso, o workflow agenda a chamada automaticamente e tambem permite dispa
 
 ## Banco de dados
 
-SQLite local — cada usuário tem seus dados separados com `user_id` em todas as tabelas.
-O arquivo `database.sqlite` é criado automaticamente ao iniciar o backend.
+O backend usa MongoDB com Mongoose.
+
+Defina `MONGODB_URI` no ambiente local e na Vercel para permitir a conexão com o cluster.
+O backend usa a base lógica `mentoria` ao inicializar a conexão.
+
+## Producao recomendada
+
+Se o MongoDB Atlas nao puder usar allowlist ampla de IP, nao publique o backend em Vercel Serverless.
+Nesse caso, o caminho estavel e:
+
+- frontend na Vercel
+- backend em VPS com IP fixo
+- Atlas liberando somente o IP da VPS
+
+O frontend ja suporta API externa via `VITE_API_BASE_URL` em [frontend/src/services/api.ts](frontend/src/services/api.ts).
+
+### Backend em VPS com Docker
+
+Arquivos prontos para deploy:
+
+- [backend/Dockerfile](backend/Dockerfile)
+- [backend/docker-compose.vps.yml](backend/docker-compose.vps.yml)
+- [backend/.env.vps.example](backend/.env.vps.example)
+
+Passos na VPS:
+
+```bash
+cd backend
+cp .env.vps.example .env
+# edite .env com as credenciais reais
+docker compose -f docker-compose.vps.yml up -d --build
+```
+
+Depois disso, publique a API atras de um dominio como `https://api.seu-dominio.com` e libere esse IP fixo no Atlas Network Access.
+
+### Nginx reverso com HTTPS
+
+Use o Nginx na propria VPS para expor a API e manter o container do backend acessivel apenas localmente em `127.0.0.1:3001`.
+
+Template pronto:
+
+- [backend/nginx/api.seu-dominio.com.conf.example](backend/nginx/api.seu-dominio.com.conf.example)
+
+Passos no Ubuntu/Debian:
+
+```bash
+sudo apt update
+sudo apt install -y nginx certbot python3-certbot-nginx
+sudo mkdir -p /var/www/certbot
+sudo cp backend/nginx/api.seu-dominio.com.conf.example /etc/nginx/sites-available/api.seu-dominio.com.conf
+```
+
+Edite o arquivo em `/etc/nginx/sites-available/api.seu-dominio.com.conf` e troque `api.seu-dominio.com` pelo dominio real.
+
+Ative o site e valide a configuracao:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/api.seu-dominio.com.conf /etc/nginx/sites-enabled/api.seu-dominio.com.conf
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Com o DNS `A` do dominio apontando para a VPS, emita o certificado:
+
+```bash
+sudo certbot --nginx -d api.seu-dominio.com
+```
+
+Teste final:
+
+```bash
+curl https://api.seu-dominio.com/api/health
+```
+
+Se o backend estiver respondendo corretamente, configure o frontend na Vercel para usar esse dominio.
+
+### Frontend na Vercel apontando para a VPS
+
+Defina no projeto do frontend:
+
+```bash
+VITE_API_BASE_URL=https://api.seu-dominio.com/api
+```
+
+Com isso, o frontend deixa de usar as funcoes serverless da Vercel para autenticacao e dados, e passa a consumir o backend dedicado.

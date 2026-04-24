@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createFileDatabase } = require('./filePersistence');
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -285,7 +286,21 @@ function getModel(name, schema) {
   return mongoose.models[name] || mongoose.model(name, schema);
 }
 
+let databaseDriver = 'mongo';
+let fileDatabase = null;
+
+function getFileDatabase() {
+  if (!fileDatabase) {
+    fileDatabase = createFileDatabase();
+  }
+  return fileDatabase;
+}
+
 function getDatabase() {
+  if (databaseDriver === 'file') {
+    return getFileDatabase();
+  }
+
   return {
     users:      getModel('User', userSchema),
     planner:    getModel('Planner', plannerSchema),
@@ -310,14 +325,76 @@ function getDatabase() {
 let connected = false;
 let connectPromise = null;
 
+function getPersistenceDriver() {
+  return String(process.env.PERSISTENCE_DRIVER || 'auto').trim().toLowerCase();
+}
+
+function canFallbackToFileDatabase() {
+  const driver = getPersistenceDriver();
+  if (driver === 'file') return true;
+  if (driver === 'mongo') return false;
+
+  // Em produção, fallback em arquivo só deve ocorrer quando habilitado explicitamente.
+  if (String(process.env.NODE_ENV || '').toLowerCase() === 'production') {
+    return String(process.env.ENABLE_FILE_DB_FALLBACK || '').toLowerCase() === 'true';
+  }
+
+  // Em desenvolvimento/local, mantém fallback por padrão para facilitar operação offline.
+  return process.env.ENABLE_FILE_DB_FALLBACK !== 'false';
+}
+
+function activateFileDatabase(reason) {
+  databaseDriver = 'file';
+  getFileDatabase();
+  if (reason) {
+    console.warn(`[Persistence] usando persistência em arquivo: ${reason}`);
+  }
+}
+
 function getMongoUri() {
-  const raw = process.env.MONGODB_URI;
-  if (!raw) return '';
-  // Vercel/env tooling can accidentally persist CRLF; trim keeps URI valid.
-  return String(raw).trim();
+  const candidates = [
+    process.env.MONGODB_URI,
+    process.env.appplanodeestudosvercelapp_MONGODB_URI,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+
+    // Normaliza casos comuns de configuração quebrada no painel/env CLI.
+    let value = String(candidate).trim();
+
+    // Remove aspas envolvendo todo o valor: "mongodb://..." ou 'mongodb://...'
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1).trim();
+    }
+
+    // Aceita valores no formato CHAVE=mongodb://... e extrai apenas a URI.
+    const mongoStart = value.indexOf('mongodb');
+    if (mongoStart > 0) {
+      value = value.slice(mongoStart).trim();
+    }
+
+    if (value.startsWith('mongodb://') || value.startsWith('mongodb+srv://')) {
+      return value;
+    }
+  }
+
+  return '';
 }
 
 async function initializeDatabase() {
+  const driver = getPersistenceDriver();
+
+  if (driver === 'file') {
+    activateFileDatabase('driver forçado por PERSISTENCE_DRIVER=file');
+    return;
+  }
+
+  if (databaseDriver === 'file') {
+    getFileDatabase();
+    return;
+  }
+
   if (connected) return;
   if (connectPromise) {
     await connectPromise;
@@ -326,20 +403,28 @@ async function initializeDatabase() {
 
   const uri = getMongoUri();
   if (!uri) {
+    if (canFallbackToFileDatabase()) {
+      activateFileDatabase('MONGODB_URI não configurada');
+      return;
+    }
     throw new Error('MONGODB_URI não configurada. Adicione no .env ou no Vercel Environment Variables.');
   }
 
   connectPromise = mongoose.connect(uri, {
     dbName: 'mentoria',
-    serverSelectionTimeoutMS: 8000,
-    connectTimeoutMS: 8000,
-    socketTimeoutMS: 10000,
-    family: 4,
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 5000,
+    socketTimeoutMS: 8000,
   }).then(() => {
     connected = true;
+    databaseDriver = 'mongo';
     console.log('MongoDB conectado com sucesso');
   }).catch((err) => {
     connected = false;
+    if (canFallbackToFileDatabase()) {
+      activateFileDatabase(err.message);
+      return;
+    }
     throw err;
   }).finally(() => {
     connectPromise = null;

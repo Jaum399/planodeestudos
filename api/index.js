@@ -12,7 +12,7 @@ const app = require('../backend/src/index');
 // Garante que o MongoDB está conectado antes de cada request (serverless safe)
 module.exports = async (req, res) => {
   const url = String(req.url || '');
-  const isPublicRoute = url.startsWith('/api/public') || url.startsWith('/public') || url === '/api/health' || url === '/health';
+  const isPublicRoute = url.startsWith('/api/public') || url.startsWith('/public') || url.startsWith('/api/health') || url.startsWith('/health');
 
   if (isPublicRoute) {
     return app(req, res);
@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
   try {
     await initializeDatabase();
   } catch (err) {
-    console.error('Database init error:', err.message);
+    console.error('Database init error:', err.message, err.name, JSON.stringify(err.reason || {}));
     return res.status(503).json({
       error: 'Serviço temporariamente indisponível. Tente novamente em alguns minutos.',
       code: 'DATABASE_UNAVAILABLE',

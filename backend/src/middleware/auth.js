@@ -87,7 +87,7 @@ async function authenticate(req, res, next) {
       return res.status(401).json({ error: 'Usuário não encontrado' });
     }
 
-    const obj = user.toObject();
+    const obj = user.toObject ? user.toObject() : { ...user };
     const { password: _p, __v, ...safeUser } = obj;
     const privilegedUser = withUserPrivileges(safeUser);
     req.user = { ...privilegedUser, id: privilegedUser._id, access: getAccessStatus(privilegedUser) };
