@@ -10,9 +10,35 @@ const api = axios.create({
   },
 });
 
+function normalizeStoredToken(rawToken: string | null): string | null {
+  if (!rawToken) return null;
+
+  let normalized = String(rawToken).trim();
+  if (!normalized) return null;
+
+  if (/^bearer\s+/i.test(normalized)) {
+    normalized = normalized.replace(/^bearer\s+/i, '').trim();
+  }
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+
+  return normalized || null;
+}
+
 // Attach JWT token to every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('mentoria_token');
+  const rawToken = localStorage.getItem('mentoria_token');
+  const token = normalizeStoredToken(rawToken);
+
+  if (rawToken && token && rawToken !== token) {
+    localStorage.setItem('mentoria_token', token);
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,10 +49,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const requestUrl = String(error.config?.url || '');
+    const isAuthEndpoint = /\/auth\/(login|register|forgot-password|reset-password)$/.test(requestUrl);
+
+    if (status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('mentoria_token');
       localStorage.removeItem('mentoria_user');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

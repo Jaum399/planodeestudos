@@ -197,6 +197,36 @@ curl https://api.seu-dominio.com/api/health
 
 Se o backend estiver respondendo corretamente, configure o frontend na Vercel para usar esse dominio.
 
+## Cutover final para persistencia online duravel
+
+Quando a VPS estiver pronta e conectada no Atlas com IP fixo, execute:
+
+1. Na VPS (como root), com o repositorio em `/opt/appmentoria`:
+
+```bash
+export API_DOMAIN=api.seu-dominio.com
+export LETSENCRYPT_EMAIL=voce@seu-dominio.com
+export FRONTEND_URL=https://app-planodeestudos.vercel.app
+export MONGODB_URI='mongodb+srv://usuario:senha@cluster.mongodb.net/?retryWrites=true&w=majority'
+export JWT_SECRET='troque-por-um-segredo-forte'
+
+bash /opt/appmentoria/backend/scripts/deploy-vps.sh
+```
+
+2. No seu computador local, para apontar a Vercel para a API da VPS:
+
+```powershell
+./scripts/cutover-vercel-to-vps.ps1 -ApiBaseUrl https://api.seu-dominio.com/api
+```
+
+3. Validacao:
+
+```bash
+curl -i https://api.seu-dominio.com/api/health
+```
+
+E no frontend em producao, o login deve responder 200/401 (nunca 503 de banco indisponivel).
+
 ### Frontend na Vercel apontando para a VPS
 
 Defina no projeto do frontend:

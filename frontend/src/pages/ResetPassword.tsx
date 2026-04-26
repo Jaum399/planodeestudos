@@ -96,9 +96,11 @@ export default function ResetPassword() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-gray-400 text-xs font-medium mb-1.5">Nova senha</label>
+                  <label htmlFor="reset-new-password" className="block text-gray-400 text-xs font-medium mb-1.5">Nova senha</label>
                   <div className="relative">
                     <input
+                      id="reset-new-password"
+                      name="newPassword"
                       type={showPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
@@ -119,8 +121,10 @@ export default function ResetPassword() {
                 </div>
 
                 <div>
-                  <label className="block text-gray-400 text-xs font-medium mb-1.5">Confirmar nova senha</label>
+                  <label htmlFor="reset-confirm-password" className="block text-gray-400 text-xs font-medium mb-1.5">Confirmar nova senha</label>
                   <input
+                    id="reset-confirm-password"
+                    name="confirmPassword"
                     type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}

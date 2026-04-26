@@ -47,6 +47,16 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Compatibilidade com clientes que enviam endpoint malformado, ex.: /api/auth/login/api
+app.use((req, _res, next) => {
+  const originalUrl = String(req.url || '');
+  const normalizedUrl = originalUrl.replace(/^(\/api\/.+)\/api(\?.*)?$/, '$1$2');
+  if (normalizedUrl !== originalUrl) {
+    req.url = normalizedUrl;
+  }
+  next();
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/planner', plannerRoutes);
 app.use('/api/flashcards', flashcardsRoutes);

@@ -15,14 +15,39 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function normalizeStoredToken(rawToken: string | null): string | null {
+  if (!rawToken) return null;
+
+  let normalized = String(rawToken).trim();
+  if (!normalized) return null;
+
+  if (/^bearer\s+/i.test(normalized)) {
+    normalized = normalized.replace(/^bearer\s+/i, '').trim();
+  }
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+
+  return normalized || null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('mentoria_token');
+    const rawToken = localStorage.getItem('mentoria_token');
+    const savedToken = normalizeStoredToken(rawToken);
     const savedUser = localStorage.getItem('mentoria_user');
+
+    if (rawToken && savedToken && rawToken !== savedToken) {
+      localStorage.setItem('mentoria_token', savedToken);
+    }
 
     if (savedToken && savedUser) {
       try {

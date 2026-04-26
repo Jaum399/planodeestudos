@@ -85,8 +85,10 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-gray-400 text-xs font-medium mb-1.5">Nome completo</label>
+              <label htmlFor="register-name" className="block text-gray-400 text-xs font-medium mb-1.5">Nome completo</label>
               <input
+                id="register-name"
+                name="name"
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -98,8 +100,10 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-gray-400 text-xs font-medium mb-1.5">E-mail</label>
+              <label htmlFor="register-email" className="block text-gray-400 text-xs font-medium mb-1.5">E-mail</label>
               <input
+                id="register-email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -111,9 +115,11 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-gray-400 text-xs font-medium mb-1.5">Senha</label>
+              <label htmlFor="register-password" className="block text-gray-400 text-xs font-medium mb-1.5">Senha</label>
               <div className="relative">
                 <input
+                  id="register-password"
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -133,8 +139,10 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-gray-400 text-xs font-medium mb-1.5">CPF (obrigatório)</label>
+              <label htmlFor="register-cpf" className="block text-gray-400 text-xs font-medium mb-1.5">CPF (obrigatório)</label>
               <input
+                id="register-cpf"
+                name="billingDocument"
                 type="text"
                 value={cpf}
                 onChange={e => setCpf(e.target.value)}
@@ -146,8 +154,10 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-gray-400 text-xs font-medium mb-1.5">Área de estudo (opcional)</label>
+              <label htmlFor="register-area" className="block text-gray-400 text-xs font-medium mb-1.5">Área de estudo (opcional)</label>
               <select
+                id="register-area"
+                name="area"
                 value={area}
                 onChange={e => setArea(e.target.value)}
                 className="input-field"
@@ -161,8 +171,10 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-gray-400 text-xs font-medium mb-1.5">WhatsApp (opcional)</label>
+              <label htmlFor="register-whatsapp" className="block text-gray-400 text-xs font-medium mb-1.5">WhatsApp (opcional)</label>
               <input
+                id="register-whatsapp"
+                name="whatsapp"
                 type="tel"
                 value={whatsapp}
                 onChange={e => setWhatsapp(e.target.value)}
