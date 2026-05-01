@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { processDueNotificationJobs } = require('../services/reminderNotifications');
 
 const router = express.Router();
@@ -29,5 +30,62 @@ async function handleProcess(req, res) {
 
 router.get('/process-reminders', handleProcess);
 router.post('/process-reminders', handleProcess);
+
+async function runDatabaseRoundTrip() {
+  const db = mongoose.connection?.db;
+  if (!db) {
+    throw new Error('Conexao MongoDB indisponivel para health-check');
+  }
+
+  const collection = db.collection('_ops_health_checks');
+  const probeId = `probe_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const now = new Date();
+
+  await collection.insertOne(
+    {
+      _id: probeId,
+      source: 'db-health-check',
+      createdAt: now,
+    },
+    { writeConcern: { w: 'majority' } }
+  );
+
+  const readBack = await collection.findOne({ _id: probeId });
+  if (!readBack) {
+    throw new Error('Round-trip falhou: documento nao encontrado apos escrita');
+  }
+
+  await collection.deleteOne({ _id: probeId }, { writeConcern: { w: 'majority' } });
+}
+
+async function handleDatabaseHealthCheck(req, res) {
+  if (!isAuthorized(req)) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
+  const startedAt = Date.now();
+
+  try {
+    await runDatabaseRoundTrip();
+
+    return res.json({
+      ok: true,
+      check: 'database-roundtrip',
+      durationMs: Date.now() - startedAt,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return res.status(503).json({
+      ok: false,
+      check: 'database-roundtrip',
+      durationMs: Date.now() - startedAt,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}
+
+router.get('/db-health-check', handleDatabaseHealthCheck);
+router.post('/db-health-check', handleDatabaseHealthCheck);
 
 module.exports = router;

@@ -119,12 +119,36 @@ Configure o secret no GitHub:
 
 Depois disso, o workflow agenda a chamada automaticamente e tambem permite disparo manual em `workflow_dispatch`.
 
+## Health-check diario do banco (MongoDB)
+
+Para reduzir risco de indisponibilidade silenciosa, foi adicionado um health-check diario com round-trip real no banco:
+
+- endpoint autenticado: `/api/notifications/db-health-check`
+- teste executado: escrita + leitura + exclusao de documento temporario
+- automacao: `.github/workflows/db-health-check.yml`
+
+Configure estes secrets no GitHub repository:
+
+- `API_BASE_URL` (ex.: `https://app-planodeestudos.vercel.app`)
+- `NOTIFICATION_CRON_SECRET` (mesmo segredo ja usado em `/api/notifications/process-reminders`)
+
+Tambem e possivel rodar manualmente o workflow no GitHub Actions via `workflow_dispatch`.
+
 ## Banco de dados
 
 O backend usa MongoDB com Mongoose.
 
 Defina `MONGODB_URI` no ambiente local e na Vercel para permitir a conexão com o cluster.
 O backend usa a base lógica `mentoria` ao inicializar a conexão.
+
+Para garantir persistencia real (mesmo com a maquina local desligada), configure tambem:
+
+- `PERSISTENCE_DRIVER=mongo`
+- `ENABLE_FILE_DB_FALLBACK=false`
+
+Com isso, o backend nao grava em banco local de arquivo quando houver falha de conexao com o Atlas.
+
+Se a conexao falhar com erro de allowlist, libere o IP publico do servidor que hospeda o backend em Atlas Network Access.
 
 ## Producao recomendada
 

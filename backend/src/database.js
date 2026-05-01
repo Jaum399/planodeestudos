@@ -334,6 +334,12 @@ function canFallbackToFileDatabase() {
   if (driver === 'file') return true;
   if (driver === 'mongo') return false;
 
+  // Se uma URI do Mongo foi configurada, falha de conexão deve ser explícita.
+  // Isso evita gravar dados em arquivo local sem o operador perceber.
+  if (getMongoUri()) {
+    return String(process.env.ENABLE_FILE_DB_FALLBACK || '').toLowerCase() === 'true';
+  }
+
   // Em produção, fallback em arquivo só deve ocorrer quando habilitado explicitamente.
   if (String(process.env.NODE_ENV || '').toLowerCase() === 'production') {
     return String(process.env.ENABLE_FILE_DB_FALLBACK || '').toLowerCase() === 'true';
