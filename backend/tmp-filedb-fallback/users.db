@@ -1,3 +1,0 @@
-{"$$indexCreated":{"fieldName":"email","unique":false,"sparse":false}}
-{"$$indexCreated":{"fieldName":"email"}}
-{"_id":"u2","email":"fallback@test.com","password":"hash","name":"Fallback"}
