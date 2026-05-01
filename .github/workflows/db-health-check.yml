@@ -9,6 +9,13 @@ jobs:
   db-health-check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
 
     steps:
       - name: Checkout
@@ -26,9 +33,7 @@ jobs:
         run: node scripts/db-health-check.js
 
       - name: Notify Slack on failure
-        if: ${{ failure() && secrets.SLACK_WEBHOOK_URL != '' }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: ${{ failure() && env.SLACK_WEBHOOK_URL != '' }}
         run: |
           payload=$(cat <<'JSON'
           {
@@ -41,16 +46,16 @@ jobs:
             -d "$payload"
 
       - name: Notify Email on failure
-        if: ${{ failure() && secrets.SMTP_HOST != '' && secrets.SMTP_PORT != '' && secrets.SMTP_USER != '' && secrets.SMTP_PASS != '' && secrets.ALERT_EMAIL_TO != '' }}
+        if: ${{ failure() && env.SMTP_HOST != '' && env.SMTP_PORT != '' && env.SMTP_USER != '' && env.SMTP_PASS != '' && env.ALERT_EMAIL_TO != '' }}
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: ${{ secrets.SMTP_HOST }}
-          server_port: ${{ secrets.SMTP_PORT }}
+          server_address: ${{ env.SMTP_HOST }}
+          server_port: ${{ env.SMTP_PORT }}
           secure: false
-          username: ${{ secrets.SMTP_USER }}
-          password: ${{ secrets.SMTP_PASS }}
-          from: Appmentoria Monitor <${{ secrets.SMTP_USER }}>
-          to: ${{ secrets.ALERT_EMAIL_TO }}
+          username: ${{ env.SMTP_USER }}
+          password: ${{ env.SMTP_PASS }}
+          from: Appmentoria Monitor <${{ env.SMTP_USER }}>
+          to: ${{ env.ALERT_EMAIL_TO }}
           subject: '[appmentoria] Falha no Daily DB Health Check'
           body: |
             O health-check diario do banco falhou.
