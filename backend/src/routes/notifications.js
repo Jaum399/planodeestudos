@@ -88,4 +88,50 @@ async function handleDatabaseHealthCheck(req, res) {
 router.get('/db-health-check', handleDatabaseHealthCheck);
 router.post('/db-health-check', handleDatabaseHealthCheck);
 
+async function handleDatabaseReset(req, res) {
+  if (!isAuthorized(req)) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
+  const confirm = String(req.headers['x-reset-confirm'] || req.body?.confirm || '').trim();
+  if (confirm !== 'YES_RESET_ALL_DATA') {
+    return res.status(400).json({
+      ok: false,
+      error: 'Confirmação ausente. Envie x-reset-confirm=YES_RESET_ALL_DATA',
+    });
+  }
+
+  const db = mongoose.connection?.db;
+  if (!db) {
+    return res.status(503).json({ ok: false, error: 'Conexao MongoDB indisponivel' });
+  }
+
+  try {
+    const collections = await db.listCollections().toArray();
+    const dropped = [];
+
+    for (const col of collections) {
+      const name = String(col.name || '');
+      if (!name || name.startsWith('system.')) continue;
+      await db.collection(name).drop();
+      dropped.push(name);
+    }
+
+    return res.json({
+      ok: true,
+      message: 'Banco resetado com sucesso',
+      droppedCollections: dropped,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}
+
+router.post('/db-reset', handleDatabaseReset);
+
 module.exports = router;
