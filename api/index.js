@@ -22,9 +22,21 @@ module.exports = async (req, res) => {
     await initializeDatabase();
   } catch (err) {
     console.error('Database init error:', err.message, err.name, JSON.stringify(err.reason || {}));
+
+    const debugSecret = String(process.env.NOTIFICATION_CRON_SECRET || process.env.CRON_SECRET || '').trim();
+    const requestDebugSecret = String(req.headers['x-debug-secret'] || '').trim();
+    const canShowDebug = Boolean(debugSecret) && requestDebugSecret === debugSecret;
+
     return res.status(503).json({
       error: 'Serviço temporariamente indisponível. Tente novamente em alguns minutos.',
       code: 'DATABASE_UNAVAILABLE',
+      ...(canShowDebug ? {
+        debug: {
+          message: err.message,
+          name: err.name,
+          reason: err.reason || null,
+        },
+      } : {}),
     });
   }
   return app(req, res);
