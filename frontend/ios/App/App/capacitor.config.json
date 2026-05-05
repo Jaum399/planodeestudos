@@ -1,6 +1,6 @@
 {
 	"appId": "com.planodeestudos.app",
-	"appName": "Plano de Estudos",
+	"appName": "Ordex",
 	"webDir": "dist",
 	"server": {
 		"androidScheme": "https",

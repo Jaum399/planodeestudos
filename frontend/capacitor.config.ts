@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.planodeestudos.app',
-  appName: 'Plano de Estudos',
+  appName: 'Ordex',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

@@ -13,7 +13,7 @@ type PomodoroConfig = {
   roundsUntilLongBreak: number;
 };
 
-const STORAGE_KEY = 'mentudo.pomodoro.config.v1';
+const STORAGE_KEY = 'ordex.pomodoro.config.v1';
 
 const defaultConfig: PomodoroConfig = {
   focus: 25,
@@ -141,7 +141,7 @@ export default function PomodoroPage() {
   useEffect(() => {
     document.title = `${formatTime(secondsLeft)} • Pomodoro`;
     return () => {
-      document.title = 'Mentudo';
+      document.title = 'Ordex';
     };
   }, [secondsLeft]);
 

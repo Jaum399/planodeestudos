@@ -308,8 +308,8 @@ router.post('/create-checkout', authenticate, async (req, res) => {
       value: selectedPlanAmount,
       dueDate: getDateYYYYMMDD(0),
       description: selectedPlanType === PLAN_MEDHUB
-        ? 'Mentudo Premium + Centro Medico - mensal'
-        : 'Mentudo Premium - mensal',
+        ? 'Ordex Premium + Centro Medico - mensal'
+        : 'Ordex Premium - mensal',
       externalReference: req.user.id,
     };
 

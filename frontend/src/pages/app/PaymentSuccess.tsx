@@ -106,7 +106,7 @@ export default function PaymentSuccess() {
           </div>
           <h2 className="text-white text-3xl font-extrabold mb-3">Pagamento confirmado!</h2>
           <p className="text-gray-300 text-base mb-2">
-            Bem-vindo ao <span className="text-primary-400 font-bold">Mentudo Premium</span>!
+            Bem-vindo ao <span className="text-primary-400 font-bold">Ordex Premium</span>!
           </p>
           <p className="text-gray-500 text-sm mb-8">
             Todas as funcionalidades foram desbloqueadas para você.

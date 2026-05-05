@@ -1,7 +1,7 @@
 {
   "name": "app-tigas-entregas",
   "version": "1.0.0",
-  "description": "App de mentoria e estudos - entry point para Vercel serverless",
+  "description": "Ordex — Clareza cognitiva estrutura de execução",
   "scripts": {
     "dev": "node scripts/dev-all.js",
     "dev:backend": "cd backend && npm run dev",

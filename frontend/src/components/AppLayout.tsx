@@ -381,7 +381,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
               <BrainCircuit size={16} className="text-white" />
             </div>
-            <span className="text-white font-bold text-lg">Mentudo</span>
+            <span className="text-white font-bold text-lg">Ordex</span>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -474,7 +474,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-6 h-6 rounded bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
               <BrainCircuit size={12} className="text-white" />
             </div>
-            <span className="text-white font-bold text-sm">Mentudo</span>
+            <span className="text-white font-bold text-sm">Ordex</span>
           </div>
 
           <div className="flex items-center gap-3 ml-auto">

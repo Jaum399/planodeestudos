@@ -18,7 +18,7 @@ export default function LandingNavbar() {
                 <path d="M3 18L8 7L13 14L16 10L21 18H3Z" fill="white" strokeWidth="0.5" strokeLinejoin="round"/>
               </svg>
             </div>
-            <span className="text-white public-brand font-bold text-lg tracking-tight">Mentudo</span>
+            <span className="text-white public-brand font-bold text-lg tracking-tight">Ordex</span>
           </Link>
 
           {/* Desktop nav */}

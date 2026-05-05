@@ -7,7 +7,7 @@
  *   EMAIL_SECURE       — "true" p/ 465    (padrão: false)
  *   EMAIL_USER         — remetente (conta Gmail ou SMTP)
  *   EMAIL_PASS         — senha de app Gmail ou senha SMTP
- *   EMAIL_FROM_NAME    — nome exibido     (padrão: Mentudo)
+ *   EMAIL_FROM_NAME    — nome exibido     (padrão: Ordex)
  *
  * Se EMAIL_USER/EMAIL_PASS não estiverem configurados, os emails são
  * suprimidos com aviso no log — a aplicação NUNCA quebra por falta de email.
@@ -30,7 +30,7 @@ function createTransporter() {
 
 function from() {
   const user = process.env.EMAIL_USER || '';
-  const name = process.env.EMAIL_FROM_NAME || 'Mentudo';
+  const name = process.env.EMAIL_FROM_NAME || 'Ordex';
   return `"${name}" <${user}>`;
 }
 
@@ -65,7 +65,7 @@ function baseTemplate(title, bodyHtml) {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:32px 36px;text-align:center;">
-              <span style="font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.5px;">🎓 Mentudo</span>
+              <span style="font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.5px;">🎓 Ordex</span>
             </td>
           </tr>
           <!-- Body -->
@@ -78,7 +78,7 @@ function baseTemplate(title, bodyHtml) {
           <tr>
             <td style="background:#09090b;padding:20px 36px;border-top:1px solid #27272a;text-align:center;">
               <p style="margin:0;font-size:12px;color:#71717a;">
-                Mentudo &mdash; <a href="${appUrl}" style="color:#a78bfa;text-decoration:none;">acessar plataforma</a>
+                Ordex &mdash; <a href="${appUrl}" style="color:#a78bfa;text-decoration:none;">acessar plataforma</a>
               </p>
               <p style="margin:6px 0 0;font-size:11px;color:#52525b;">Este é um email automático. Não responda.</p>
             </td>
@@ -120,7 +120,7 @@ async function sendWelcomeEmail(user) {
     </table>
     ${btn('Acessar minha conta', appUrl + '/app/dashboard')}
   `;
-  return sendEmail(user.email, '🎓 Bem-vindo(a) ao Mentudo!', baseTemplate('Bem-vindo!', body));
+  return sendEmail(user.email, '🎓 Bem-vindo(a) ao Ordex!', baseTemplate('Bem-vindo!', body));
 }
 
 async function sendPaymentConfirmationEmail(user) {
@@ -145,7 +145,7 @@ async function sendPaymentConfirmationEmail(user) {
     <p style="margin:16px 0 0;font-size:13px;color:#71717a;">Em caso de dúvidas, entre em contato pelo suporte.</p>
     ${btn('Acessar plataforma Premium', appUrl + '/app/dashboard')}
   `;
-  return sendEmail(user.email, '✅ Premium ativado — Mentudo', baseTemplate('Premium ativado!', body));
+  return sendEmail(user.email, '✅ Premium ativado — Ordex', baseTemplate('Premium ativado!', body));
 }
 
 async function sendPasswordResetEmail(user, token) {
@@ -164,7 +164,7 @@ async function sendPasswordResetEmail(user, token) {
       Ou copie este link: <span style="color:#a78bfa;word-break:break-all;">${resetUrl}</span>
     </p>
   `;
-  return sendEmail(user.email, '🔒 Redefinição de senha — Mentudo', baseTemplate('Redefinição de senha', body));
+  return sendEmail(user.email, '🔒 Redefinição de senha — Ordex', baseTemplate('Redefinição de senha', body));
 }
 
 async function sendReminderEmail(user, reminder) {
@@ -193,7 +193,7 @@ async function sendReminderEmail(user, reminder) {
     ${btn('Abrir plataforma', appUrl + '/app/dashboard')}
   `;
 
-  await sendEmail(user.email, '📌 Lembrete importante — Mentudo', baseTemplate('Lembrete importante', body));
+  await sendEmail(user.email, '📌 Lembrete importante — Ordex', baseTemplate('Lembrete importante', body));
   return { sent: true, provider: 'smtp' };
 }
 

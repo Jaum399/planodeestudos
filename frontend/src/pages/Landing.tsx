@@ -227,12 +227,12 @@ export default function Landing() {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight public-heading mb-6">
-                O cérebro digital<br />
-                da sua <span className="gradient-text">aprovação.</span>
+                Clareza cognitiva<br />
+                <span className="gradient-text">estrutura de execução.</span>
               </h1>
 
               <p className="text-gray-400 text-lg mb-8 leading-relaxed">
-                Unimos a ciência da <strong className="text-primary-300">Curva de Esquecimento</strong> com uma <strong className="text-white">IA avançada</strong> para criar o sistema perfeito e garantir que você nunca esqueça o que estudou.
+                Desenvolvido com base em ciência cognitiva e organização estratégica, o <strong className="text-primary-300">Ordex</strong> estrutura exatamente o que você precisa estudar — <strong className="text-white">no momento certo</strong>.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 mb-8">

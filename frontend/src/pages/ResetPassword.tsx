@@ -65,7 +65,7 @@ export default function ResetPassword() {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
               <BrainCircuit size={18} className="text-white" />
             </div>
-            <span className="text-white font-bold text-xl">Mentudo</span>
+            <span className="text-white font-bold text-xl">Ordex</span>
           </div>
 
           {success ? (

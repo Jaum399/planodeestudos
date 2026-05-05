@@ -1,6 +1,6 @@
-# Mentoris — App de Mentoria e Estudos
+# Ordex — Clareza cognitiva estrutura de execução
 
-Sistema completo de mentoria e auxílio aos estudos com frontend React e backend Node.js.
+Desenvolvido com base em ciência cognitiva e organização estratégica, o Ordex estrutura exatamente o que você precisa estudar — no momento certo. Sistema completo de estudos inteligentes com frontend React e backend Node.js.
 
 ## Estrutura
 

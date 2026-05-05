@@ -3,8 +3,8 @@ const express = require('express');
 const router = express.Router();
 
 const APP_INFO = {
-  name: 'Plano de Estudos',
-  brand: 'Mentudo',
+  name: 'Ordex',
+  brand: 'Ordex',
   apiVersion: 'v1',
 };
 
