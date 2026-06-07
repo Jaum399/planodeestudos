@@ -42,6 +42,9 @@ const LessonsPage = lazy(routeImporters.lessons);
 const StoriesPage = lazy(routeImporters.stories);
 const GoalsManagerPage = lazy(routeImporters.goalsManager);
 const PublicDecksPage = lazy(routeImporters.publicDecks);
+const MockExamsPage = lazy(routeImporters.mockExams);
+const LeaderboardsPage = lazy(routeImporters.leaderboards);
+const AchievementsPage = lazy(routeImporters.achievements);
 
 // Fallback mínimo durante carregamento do chunk
 function PageLoader() {
@@ -375,6 +378,42 @@ export default function App() {
                 <BlockedGuard>
                   <AppLayout>
                     <PublicDecksPage />
+                  </AppLayout>
+                </BlockedGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/mock-exams"
+            element={
+              <ProtectedRoute>
+                <BlockedGuard>
+                  <AppLayout>
+                    <MockExamsPage />
+                  </AppLayout>
+                </BlockedGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/leaderboards"
+            element={
+              <ProtectedRoute>
+                <BlockedGuard>
+                  <AppLayout>
+                    <LeaderboardsPage />
+                  </AppLayout>
+                </BlockedGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/achievements"
+            element={
+              <ProtectedRoute>
+                <BlockedGuard>
+                  <AppLayout>
+                    <AchievementsPage />
                   </AppLayout>
                 </BlockedGuard>
               </ProtectedRoute>
