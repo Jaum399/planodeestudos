@@ -21,9 +21,6 @@ const userSchema = new mongoose.Schema({
   asaasPaymentStatus: { type: String, default: null },
   pending_plan_type: { type: String, default: null },
   subscriptionStatus: { type: String, default: null },
-  // Campos legados de trial (mantidos por compatibilidade de dados antigos)
-  trial_started_at: { type: String, default: null },
-  trial_ends_at: { type: String, default: null },
   // Período de carência de 3 dias após vencimento
   grace_period_ends_at: { type: String, default: null },
   reset_token: { type: String, default: null },

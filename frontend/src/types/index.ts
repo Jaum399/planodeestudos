@@ -9,8 +9,6 @@ export interface User {
   weekly_goal_hours: number;
   billingDocument?: string;
   created_at: string;
-  trial_started_at?: string;
-  trial_ends_at?: string;
   grace_period_ends_at?: string;
   subscriptionStatus?: string;
   access?: {

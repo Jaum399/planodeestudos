@@ -124,8 +124,6 @@ router.post('/register', async (req, res) => {
       area: area || '',
       goal: '',
       weekly_goal_hours: 20,
-      trial_started_at: null,
-      trial_ends_at: null,
       subscriptionStatus: privilegedSeed ? 'active' : null,
       created_at: now,
       updated_at: now,
