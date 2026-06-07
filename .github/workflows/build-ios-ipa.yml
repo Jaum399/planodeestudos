@@ -1,0 +1,178 @@
+name: Build iOS TestFlight IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build web app
+        working-directory: frontend
+        run: npm run build
+
+      - name: Setup Capacitor iOS project
+        working-directory: frontend
+        run: |
+          set -e
+          # Remove o diretório ios incompleto do repo e regenera via cap add ios
+          rm -rf ios
+          npx cap add ios
+
+      - name: Sync Capacitor iOS
+        working-directory: frontend
+        run: npx cap sync ios
+
+      - name: Configure signing assets (opcional)
+        id: signing
+        env:
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          if [ -z "$IOS_CERTIFICATE_P12_BASE64" ] || [ -z "$IOS_PROVISION_PROFILE_BASE64" ]; then
+            echo "SIGNING_AVAILABLE=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Secrets de assinatura ausentes - build sem assinatura (apenas validacao de compilacao)"
+            exit 0
+          fi
+
+          set -e
+          CERT_PATH=$RUNNER_TEMP/certificate.p12
+          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain-db
+
+          echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERT_PATH"
+          echo "$IOS_PROVISION_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+
+          echo "SIGNING_AVAILABLE=true" >> $GITHUB_OUTPUT
+          echo "✅ Certificados de assinatura configurados com sucesso"
+
+      - name: Build archive (com assinatura)
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
+        run: |
+          set -e
+          xcodebuild \
+            -workspace frontend/ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            archive
+
+      - name: Build archive (sem assinatura - validacao)
+        if: steps.signing.outputs.SIGNING_AVAILABLE != 'true'
+        run: |
+          set -e
+          echo "⚠️  Compilando SEM assinatura. Para IPA instalavel, configure os secrets:"
+          echo "   IOS_CERTIFICATE_P12_BASE64, IOS_CERTIFICATE_PASSWORD,"
+          echo "   IOS_PROVISION_PROFILE_BASE64, KEYCHAIN_PASSWORD, APPLE_TEAM_ID"
+          # Compilar para Simulator (nao requer assinatura) para validar o codigo
+          xcodebuild \
+            -workspace frontend/ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath $RUNNER_TEMP/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Create ExportOptions.plist
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
+        run: |
+          cat > $RUNNER_TEMP/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>compileBitcode</key>
+            <false/>
+            <key>destination</key>
+            <string>export</string>
+            <key>thinning</key>
+            <string>&lt;none&gt;</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Export IPA
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
+        run: |
+          set -e
+          xcodebuild -exportArchive \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            -exportPath $RUNNER_TEMP/output \
+            -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist
+
+      - name: Upload IPA artifact
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: ${{ runner.temp }}/output/*.ipa
+
+      - name: Upload xcarchive (sem assinatura)
+        if: steps.signing.outputs.SIGNING_AVAILABLE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-xcarchive-unsigned
+          path: ${{ runner.temp }}/App.xcarchive
+          if-no-files-found: warn
+
+      - name: Configure App Store Connect API key (opcional)
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY_BASE64: ${{ secrets.APPSTORE_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -e
+          if [ -z "$APPSTORE_KEY_ID" ] || [ -z "$APPSTORE_ISSUER_ID" ] || [ -z "$APPSTORE_PRIVATE_KEY_BASE64" ]; then
+            echo "App Store Connect secrets ausentes; pulando configuracao da chave."
+            exit 0
+          fi
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APPSTORE_PRIVATE_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+
+      - name: Upload to TestFlight (opcional)
+        if: steps.signing.outputs.SIGNING_AVAILABLE == 'true'
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY_BASE64: ${{ secrets.APPSTORE_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -e
+          if [ -z "$APPSTORE_KEY_ID" ] || [ -z "$APPSTORE_ISSUER_ID" ] || [ -z "$APPSTORE_PRIVATE_KEY_BASE64" ]; then
+            echo "App Store Connect secrets ausentes; pulando upload para TestFlight."
+            exit 0
+          fi
+          IPA_PATH=$(ls $RUNNER_TEMP/output/*.ipa | head -n 1)
+          xcrun altool --upload-app --type ios --file "$IPA_PATH" --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID"

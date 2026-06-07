@@ -1,0 +1,64 @@
+name: Daily DB Health Check
+
+on:
+  schedule:
+    - cron: '17 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  db-health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run DB health check
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          NOTIFICATION_CRON_SECRET: ${{ secrets.NOTIFICATION_CRON_SECRET }}
+        run: node scripts/db-health-check.js
+
+      - name: Notify Slack on failure
+        if: ${{ failure() && env.SLACK_WEBHOOK_URL != '' }}
+        run: |
+          payload=$(cat <<'JSON'
+          {
+            "text": "[appordex] Falha no Daily DB Health Check. Verifique o run no GitHub Actions."
+          }
+          JSON
+          )
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$payload"
+
+      - name: Notify Email on failure
+        if: ${{ failure() && env.SMTP_HOST != '' && env.SMTP_PORT != '' && env.SMTP_USER != '' && env.SMTP_PASS != '' && env.ALERT_EMAIL_TO != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ env.SMTP_HOST }}
+          server_port: ${{ env.SMTP_PORT }}
+          secure: false
+          username: ${{ env.SMTP_USER }}
+          password: ${{ env.SMTP_PASS }}
+          from: Appordex Monitor <${{ env.SMTP_USER }}>
+          to: ${{ env.ALERT_EMAIL_TO }}
+          subject: '[appordex] Falha no Daily DB Health Check'
+          body: |
+            O health-check diario do banco falhou.
+            Repositorio: ${{ github.repository }}
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

@@ -1,0 +1,31 @@
+{
+  "name": "ordex-backend",
+  "version": "1.0.0",
+  "description": "Backend para App Ordex — Clareza cognitiva estrutura de execução",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "migrate:user-data": "node scripts/migrate-user-data.js",
+    "migrate:user-cross-db": "node scripts/migrate-user-cross-db.js",
+    "migrate:medsimple-api": "node scripts/migrate-medsimple-api-to-mongo.js",
+    "import:medsimple-json-api": "node scripts/import-medsimple-json-via-api.js",
+    "seed:courses": "node scripts/seed-courses-lessons-v2.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@seald-io/nedb": "^4.0.4",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.22.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.4.1",
+    "nodemailer": "^8.0.7",
+    "stripe": "^22.0.1",
+    "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

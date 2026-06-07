@@ -1,0 +1,217 @@
+{
+  "courses": [
+    {
+      "title": "Fundamentos de Alto Rendimento",
+      "description": "Aprenda técnicas essenciais para otimizar seu desempenho e alcançar excelência nos estudos.",
+      "free": true,
+      "order": 1
+    },
+    {
+      "title": "Sprint de Questões e Simulados",
+      "description": "Prepare-se intensivamente com questões estratégicas e simulados completos.",
+      "free": false,
+      "order": 2
+    },
+    {
+      "title": "Revisão Estratégica Final",
+      "description": "Consolidação de conhecimento e últimos preparativos antes da prova.",
+      "free": false,
+      "order": 3
+    },
+    {
+      "title": "Aprofundamento por Assunto",
+      "description": "Módulos especializados para dominar tópicos específicos.",
+      "free": false,
+      "order": 4
+    }
+  ],
+  "lessons": [
+    {
+      "course_index": 0,
+      "title": "Introdução ao Alto Rendimento",
+      "description": "Conheça os princípios fundamentais do desempenho acadêmico.",
+      "videoUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "duration_seconds": 720,
+      "order": 1,
+      "tags": ["fundamentos", "motivação", "introdução"],
+      "free": true,
+      "published": true
+    },
+    {
+      "course_index": 0,
+      "title": "Gestão de Tempo e Produtividade",
+      "description": "Técnicas comprovadas para gerenciar seu tempo eficientemente.",
+      "videoUrl": "https://www.youtube.com/watch?v=9bZkp7q19f0",
+      "duration_seconds": 1200,
+      "order": 2,
+      "tags": ["produtividade", "gestão-de-tempo", "organização"],
+      "free": true,
+      "published": true
+    },
+    {
+      "course_index": 0,
+      "title": "Técnicas de Memorização Avançadas",
+      "description": "Métodos científicos para memorizar e reter informações.",
+      "videoUrl": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+      "duration_seconds": 900,
+      "order": 3,
+      "tags": ["memorização", "técnicas", "neurociência"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 0,
+      "title": "Foco e Concentração",
+      "description": "Estratégias para manter o foco durante longas sessões de estudo.",
+      "videoUrl": "https://www.youtube.com/watch?v=DLzxrzFCyOs",
+      "duration_seconds": 1080,
+      "order": 4,
+      "tags": ["foco", "concentração", "mindfulness"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 1,
+      "title": "Como Resolver Questões Estrategicamente",
+      "description": "Aprenda a abordar questões de forma estruturada.",
+      "videoUrl": "https://www.youtube.com/watch?v=OPf0YbXqDm0",
+      "duration_seconds": 1200,
+      "order": 1,
+      "tags": ["questões", "estratégia", "resolução"],
+      "free": true,
+      "published": true
+    },
+    {
+      "course_index": 1,
+      "title": "Análise de Erros em Simulados",
+      "description": "Técnica para extrair máximo aprendizado de seus erros.",
+      "videoUrl": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+      "duration_seconds": 900,
+      "order": 2,
+      "tags": ["simulados", "análise-de-erros", "feedback"],
+      "free": true,
+      "published": true
+    },
+    {
+      "course_index": 1,
+      "title": "Sprint de 100 Questões",
+      "description": "Resolva 100 questões de forma intensiva com cronômetro.",
+      "videoUrl": "https://www.youtube.com/watch?v=ZZ5qpXbvcci",
+      "duration_seconds": 3600,
+      "order": 3,
+      "tags": ["sprint", "desafio", "questões"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 1,
+      "title": "Simulado Completo - Modo Exame",
+      "description": "Simulado com todas as áreas: 4h de prova.",
+      "videoUrl": "https://www.youtube.com/watch?v=8fnfeuQnKEI",
+      "duration_seconds": 14400,
+      "order": 4,
+      "tags": ["simulado", "exame", "completo"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 1,
+      "title": "Revisão de Gabarito e Resolução",
+      "description": "Resolução comentada de todas as questões do simulado.",
+      "videoUrl": "https://www.youtube.com/watch?v=kfvxMQd4f9I",
+      "duration_seconds": 7200,
+      "order": 5,
+      "tags": ["gabarito", "resolução", "comentada"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 2,
+      "title": "Roteiro de Revisão Eficiente",
+      "description": "Plano estruturado para revisar todo o conteúdo.",
+      "videoUrl": "https://www.youtube.com/watch?v=C0DPdy98e4c",
+      "duration_seconds": 1200,
+      "order": 1,
+      "tags": ["revisão", "planejamento", "eficiência"],
+      "free": true,
+      "published": true
+    },
+    {
+      "course_index": 2,
+      "title": "Revisão de Conceitos Críticos",
+      "description": "Foco nos conceitos mais importantes e frequentes.",
+      "videoUrl": "https://www.youtube.com/watch?v=9T1vfsj0-5Y",
+      "duration_seconds": 2400,
+      "order": 2,
+      "tags": ["conceitos", "crítico", "foco"],
+      "free": true,
+      "published": true
+    },
+    {
+      "course_index": 2,
+      "title": "Questões que Mais Caem",
+      "description": "Análise das questões recorrentes em provas anteriores.",
+      "videoUrl": "https://www.youtube.com/watch?v=5dKazAjNwsk",
+      "duration_seconds": 1800,
+      "order": 3,
+      "tags": ["questões", "recorrentes", "padrão"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 2,
+      "title": "Mentoria Final - Psicologia da Prova",
+      "description": "Preparação mental e estratégias para o dia da prova.",
+      "videoUrl": "https://www.youtube.com/watch?v=V-aUjScWrv0",
+      "duration_seconds": 1500,
+      "order": 4,
+      "tags": ["mentoria", "psicologia", "prova"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 3,
+      "title": "Tópico 1 - Conceitos Fundamentais",
+      "description": "Base essencial para o primeiro tópico.",
+      "videoUrl": "https://www.youtube.com/watch?v=Dff4fww0ufk",
+      "duration_seconds": 1800,
+      "order": 1,
+      "tags": ["aprofundamento", "tópico-1", "fundamentos"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 3,
+      "title": "Tópico 1 - Aplicações Práticas",
+      "description": "Exercícios e aplicações do tópico 1.",
+      "videoUrl": "https://www.youtube.com/watch?v=rJukFMvjjJo",
+      "duration_seconds": 1500,
+      "order": 2,
+      "tags": ["aprofundamento", "tópico-1", "prática"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 3,
+      "title": "Tópico 2 - Conceitos Fundamentais",
+      "description": "Base essencial para o segundo tópico.",
+      "videoUrl": "https://www.youtube.com/watch?v=5KLPxDtMqe8",
+      "duration_seconds": 2100,
+      "order": 3,
+      "tags": ["aprofundamento", "tópico-2", "fundamentos"],
+      "free": false,
+      "published": true
+    },
+    {
+      "course_index": 3,
+      "title": "Tópico 2 - Questões Desafiadoras",
+      "description": "Questões de alta dificuldade do tópico 2.",
+      "videoUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "duration_seconds": 1800,
+      "order": 4,
+      "tags": ["aprofundamento", "tópico-2", "desafio"],
+      "free": false,
+      "published": true
+    }
+  ]
+}
