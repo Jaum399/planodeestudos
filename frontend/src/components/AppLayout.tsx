@@ -667,7 +667,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <TrialBanner />
 
         {/* Page content */}
-        <main id="main-content" className="flex-1 p-4 md:p-6 lg:p-8">
+        <main id="main-content" className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>
