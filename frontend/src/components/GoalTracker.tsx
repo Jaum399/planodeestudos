@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Trash2, Edit2 } from 'lucide-react';
 
 interface Goal {
   _id: string;
