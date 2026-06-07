@@ -48,11 +48,11 @@ async function generateFlashcardsWithAI({ theme, subject, quantity, sourceText }
     ? `Base as perguntas principalmente no seguinte conteúdo:\n\n${sourceText.slice(0, 3000)}\n\n`
     : '';
 
-  const systemInstruction = `Você é um especialista em criar flashcards para estudo médico de alta qualidade, similar ao padrão MedSimple.
-Crie perguntas e respostas que sejam específicas, testáveis e clinicamente relevantes.
-Priorize clareza, precisão e valor educacional acima de criatividade.`;
+  const systemInstruction = `Você é um especialista em criar flashcards para estudo médico de ALTÍSSIMA ESPECIFICIDADE.
+Gere respostas NUNCA genéricas: sempre com nomes específicos, números exatos, critérios precisos.
+Cada resposta deve ser válida em prova de concurso médico.`;
 
-  const prompt = `${contextBlock}Gere exatamente ${quantity} flashcards de estudo de alta qualidade sobre "${theme}" para a matéria de ${subject}.
+  const prompt = `${contextBlock}Gere exatamente ${quantity} flashcards de estudo de ALTÍSSIMA ESPECIFICIDADE sobre "${theme}" para a matéria de ${subject}.
 
 Retorne SOMENTE um array JSON válido, sem texto antes ou depois, sem markdown, sem \`\`\`:
 [
@@ -60,22 +60,50 @@ Retorne SOMENTE um array JSON válido, sem texto antes ou depois, sem markdown, 
   ...
 ]
 
-REGRAS ESSENCIAIS:
-- Perguntas devem ser ESPECÍFICAS e TESTÁVEIS: Evite perguntas genéricas, priorize conceitos clínicos, cálculos, critérios diagnósticos
-- Respostas: Máximo 3 frases, diretas, memorizáveis. Foque em QUANDO usar, COMO identificar, POR QUE é importante
-- Formato variado: Definição clínica, aplicação prática, diferencial diagnóstico, sequência temporal, critérios ABCD/similares, exemplos concretos
-- Evite: Respostas óbvias, definições de dicionário superficiais, ambiguidade
-- Contexto: Para medicina, inclua: sinais de alerta, contra-indicações, complicações, validação em prova
+REGRAS DE ESPECIFICIDADE OBRIGATÓRIAS:
+1. NOMEAÇÃO EXATA: Lista NOMES ESPECÍFICOS, não genéricos
+   ❌ Não: "Quais são as artérias?"
+   ✅ Sim: "Qual é a origem da artéria coronária descendente anterior e qual vaso ela origina-se?"
 
-EXEMPLOS DE QUALIDADE ALTA:
-❌ Ruim: "O que é diabetes?" → "Doença do pâncreas"
-✅ Bom: "Qual valor de glicemia em jejum define diabetes mellitus tipo 2?" → "≥126 mg/dL em duas ocasiões diferentes (OMS 2010)"
+2. NÚMEROS E VALORES CONCRETOS
+   ❌ Não: "Qual é o valor normal de glicemia?"
+   ✅ Sim: "Qual é o valor de glicemia em jejum que define diabetes mellitus (OMS 2010)? [≥126 mg/dL]"
 
-❌ Ruim: "Fale sobre infecção" → "Processo causado por germes"
-✅ Bom: "Qual é o critério qSOFA para sepse e qual score indica risco alto de morte em 30 dias?" → "Altered mental status, SBP ≤100 mmHg, RR ≥22. Score ≥2 = risco alto de morte (>40%)"
+3. ESTRUTURAS ANATÔMICAS PRECISAS
+   ❌ Não: "Quais estruturas compõem o coração?"
+   ✅ Sim: "Cite as 4 veias do coração: [Veia cava superior, veia cava inferior, veia coronária, seio coronário]"
 
-- Use português brasileiro
-- Priorize clareza e precisão`;
+4. CRITÉRIOS DIAGNÓSTICOS ESPECÍFICOS
+   ❌ Não: "Como diagnosticar sepse?"
+   ✅ Sim: "Qual é o critério qSOFA para sepse? [≥2 de: rebaixamento mental, PAS ≤100, FR ≥22]"
+
+5. SEQUÊNCIAS E PASSOS EXATOS
+   ❌ Não: "Qual é o processo de coagulação?"
+   ✅ Sim: "Cite em ordem os passos da cascata de coagulação (primária → secundária → terciária)"
+
+6. DIFERENÇAS CLÍNICAS PRECISAS
+   ❌ Não: "Qual a diferença entre asma e DPOC?"
+   ✅ Sim: "Qual é a principal diferença: reversibilidade em asma vs DPOC irreversível, medida por VEF1 pós-broncodilatador"
+
+ESTRUTURA DE RESPOSTA (máximo 3 frases):
+Frase 1: Resposta direta com número/nome específico
+Frase 2: Contexto clínico OU critério diferencial
+Frase 3: Implicação prática OU validação de prova
+
+EXEMPLOS MÉDICOS DE ALTA QUALIDADE:
+Q: "Quais são as veias do coração?"
+A: "4 veias principais: veia cava superior, veia cava inferior, 4 veias pulmonares e seio coronário. O seio coronário drena o sangue do próprio miocárdio. Memorizar localização: 2 cavas chegam no átrio direito, 4 pulmonares no esquerdo, coronária é própria do ventrículo."
+
+Q: "Qual critério define hipertensão arterial?"
+A: "PAS ≥140 mmHg E/OU PAD ≥90 mmHg em ≥3 ocasiões em consultório (ou média de MAPA). Pré-hipertensão é 120-139/80-89. Importante: medição em repouso 5 min, sem cafeína 30 min antes."
+
+Q: "Cite os critérios de SIRS (resposta inflamatória sistêmica)"
+A: "4 critérios (≥2 presentes): Temp >38°C ou <36°C, FC >90, RR >20 ou PaCO2 <32, Leucócitos >11000 ou <4000. SIRS + infecção = sepse. SIRS isolado pode ter origem não-infecciosa (queimadura, cirurgia)."
+
+- Use português brasileiro com terminologia médica EXATA
+- PROÍBIDO usar expressões vagas: "pode", "geralmente", "muitas vezes", "frequentemente"
+- Priorize: NOMES, NÚMEROS, CRITÉRIOS, EVIDÊNCIAS
+- Cada resposta deve ser válida em prova de concurso médico`;
 
   const raw = await callOpenAI(prompt, systemInstruction);
 
