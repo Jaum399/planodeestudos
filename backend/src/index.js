@@ -30,6 +30,11 @@ const publicRoutes = require('./routes/public');
 const lessonsRoutes = require('./routes/lessons');
 const goalsRoutes = require('./routes/goals');
 const publicDecksRoutes = require('./routes/publicDecks');
+const deckSharingRoutes = require('./routes/deckSharing');
+const mockExamsRoutes = require('./routes/mockExams');
+const leaderboardsRoutes = require('./routes/leaderboards');
+const achievementsRoutes = require('./routes/achievements');
+const recommendationsRoutes = require('./routes/recommendations');
 
 const { initializeDatabase } = require('./database');
 
@@ -81,6 +86,11 @@ app.use('/api/public', publicRoutes);
 app.use('/api/lessons', lessonsRoutes);
 app.use('/api/goals', goalsRoutes);
 app.use('/api/public-decks', publicDecksRoutes);
+app.use('/api/deck-sharing', deckSharingRoutes);
+app.use('/api/mock-exams', mockExamsRoutes);
+app.use('/api/leaderboards', leaderboardsRoutes);
+app.use('/api/achievements', achievementsRoutes);
+app.use('/api/recommendations', recommendationsRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
