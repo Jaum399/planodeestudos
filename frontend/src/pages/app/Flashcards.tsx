@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, Clock3, Plus, Target, TrendingUp, X } from 'lucide-react';
-import { flashcardDecksApi, flashcardsApi, goalsApi } from '../../services/api';
+import { BookOpen, Clock3, Plus, Target, TrendingUp, X, Sparkles } from 'lucide-react';
+import { flashcardDecksApi, flashcardsApi, goalsApi, studyToolsApi } from '../../services/api';
 import GoalTracker from '../../components/GoalTracker';
 import type {
   Flashcard,
@@ -62,6 +62,17 @@ export default function Flashcards() {
   const [showCreateDeck, setShowCreateDeck] = useState(false);
   const [deckLoading, setDeckLoading] = useState(false);
   const [deckForm, setDeckForm] = useState({ name: '', color: '#7c3aed', description: '' });
+
+  const [showAIGeneration, setShowAIGeneration] = useState(false);
+  const [aiForm, setAiForm] = useState({
+    theme: '',
+    source_text: '',
+    subject: '',
+    quantity: 8,
+    target_deck_id: '',
+  });
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState('');
 
   const [dailyGoal, setDailyGoal] = useState<any>(null);
   const [todayProgress, setTodayProgress] = useState(0);
@@ -215,6 +226,33 @@ export default function Flashcards() {
     }
   };
 
+  const handleGenerateAI = async () => {
+    if (!aiForm.theme.trim() && aiForm.source_text.trim().length < 40) return;
+    setAiLoading(true);
+    setAiResult('');
+    try {
+      const { data } = await studyToolsApi.generateFlashcardsByTheme({
+        theme: aiForm.theme.trim() || undefined,
+        quantity: aiForm.quantity,
+        subject: aiForm.subject.trim() || undefined,
+        source_text: aiForm.source_text.trim() || undefined,
+        deck_id: aiForm.target_deck_id || undefined,
+      });
+
+      const created = Number(data?.created || 0);
+      setAiResult(`✨ IA criou ${created} flashcards para você!`);
+      setAiForm({ theme: '', source_text: '', subject: '', quantity: 8, target_deck_id: '' });
+      setTimeout(() => {
+        setShowAIGeneration(false);
+        loadDecksAndProgress();
+      }, 1500);
+    } catch (error) {
+      setAiResult('❌ Não foi possível gerar flashcards. Tente novamente.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const openDeckFromProgress = (deckId: string) => {
     const exists = deckTiles.some((deck) => deck.id === deckId);
     if (!exists) return;
@@ -319,13 +357,22 @@ export default function Flashcards() {
               <h2 className="text-xl font-bold text-white">Meus Decks</h2>
               <p className="text-gray-400 text-sm">Escolha um deck para abrir seus flashcards</p>
             </div>
-            <button
-              className="btn-primary py-2 px-3 inline-flex items-center gap-2"
-              onClick={() => setShowCreateDeck(true)}
-            >
-              <Plus size={14} />
-              Novo deck
-            </button>
+            <div className="flex gap-2">
+              <button
+                className="btn-primary py-2 px-3 inline-flex items-center gap-2 text-sm"
+                onClick={() => setShowAIGeneration(true)}
+              >
+                <Sparkles size={14} />
+                Gerar com IA
+              </button>
+              <button
+                className="btn-primary py-2 px-3 inline-flex items-center gap-2"
+                onClick={() => setShowCreateDeck(true)}
+              >
+                <Plus size={14} />
+                Novo deck
+              </button>
+            </div>
           </div>
 
           {deckTiles.length > 0 ? (
@@ -411,6 +458,120 @@ export default function Flashcards() {
                   {deckLoading ? 'Salvando...' : 'Criar deck'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showAIGeneration && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in p-4">
+            <div className="bg-app-surface rounded-2xl shadow-2xl p-6 w-full max-w-md relative border border-primary-700/30">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-white"
+                onClick={() => {
+                  setShowAIGeneration(false);
+                  setAiResult('');
+                }}
+                aria-label="Fechar"
+              >
+                <X size={20} />
+              </button>
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Sparkles size={18} className="text-yellow-400" />
+                Gerar Flashcards com IA
+              </h3>
+
+              {aiResult ? (
+                <div className="text-center py-8">
+                  <p className="text-white text-lg mb-4">{aiResult}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">Tema</label>
+                    <input
+                      className="input-field text-sm py-2"
+                      placeholder="Ex: Fisiologia renal, Farmacologia"
+                      value={aiForm.theme}
+                      onChange={(e) => setAiForm({ ...aiForm, theme: e.target.value })}
+                      maxLength={50}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">
+                      Conteúdo (opcional, recomendado)
+                    </label>
+                    <textarea
+                      className="input-field text-sm py-2 min-h-[80px]"
+                      placeholder="Cole o conteúdo da aula/capítulo para personalizados"
+                      value={aiForm.source_text}
+                      onChange={(e) => setAiForm({ ...aiForm, source_text: e.target.value })}
+                      maxLength={2000}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1">Disciplina</label>
+                      <input
+                        className="input-field text-sm py-2"
+                        placeholder="Opcional"
+                        value={aiForm.subject}
+                        onChange={(e) => setAiForm({ ...aiForm, subject: e.target.value })}
+                        maxLength={30}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1">Quantidade</label>
+                      <input
+                        type="number"
+                        min={3}
+                        max={20}
+                        className="input-field text-sm py-2"
+                        value={aiForm.quantity}
+                        onChange={(e) => setAiForm({ ...aiForm, quantity: Number(e.target.value || 8) })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">Deck de destino</label>
+                    <select
+                      className="input-field text-sm py-2"
+                      value={aiForm.target_deck_id}
+                      onChange={(e) => setAiForm({ ...aiForm, target_deck_id: e.target.value })}
+                    >
+                      <option value="">Criar novo deck</option>
+                      {deckTiles.map((deck) => (
+                        <option key={deck.id} value={deck.id}>
+                          {deck.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    className="btn-primary py-2.5 mt-2"
+                    disabled={
+                      aiLoading ||
+                      (!aiForm.theme.trim() && aiForm.source_text.trim().length < 40)
+                    }
+                    onClick={handleGenerateAI}
+                  >
+                    {aiLoading ? (
+                      <>
+                        <span className="inline-block animate-spin mr-2">⚡</span>
+                        Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} className="inline mr-1" />
+                        Gerar Cards
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

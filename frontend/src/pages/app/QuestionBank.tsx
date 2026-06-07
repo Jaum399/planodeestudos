@@ -344,57 +344,86 @@ export default function QuestionBank() {
       </div>
 
       {/* Simulado CTA */}
-      <div className="card-glass rounded-2xl p-5 border border-primary-600/20 card-glow">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex-1">
-            <h3 className="text-white font-bold flex items-center gap-2"><Trophy size={18} className="text-yellow-400" /> Iniciar Simulado</h3>
-            <p className="text-gray-400 text-sm mt-0.5">Teste seu conhecimento com cronômetro e gabarito automático</p>
+      <div className="grid md:grid-cols-2 gap-5">
+        <div className="card-glass rounded-2xl p-5 border border-primary-600/20 card-glow">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h3 className="text-white font-bold flex items-center gap-2 text-lg"><Trophy size={20} className="text-yellow-400" /> Simulado Cronometrado</h3>
+              <p className="text-gray-400 text-sm mt-1">Teste seu conhecimento com tempo limite</p>
+            </div>
+            <div className="space-y-3">
+              <select
+                className="input-field text-sm py-2 w-full"
+                value={simPhase}
+                onChange={e => setSimPhase(e.target.value)}
+              >
+                {PHASES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
+              <select
+                className="input-field text-sm py-2 w-full"
+                value={simCount}
+                onChange={e => setSimCount(Number(e.target.value))}
+              >
+                <option value={5}>5 questões</option>
+                <option value={10}>10 questões</option>
+                <option value={20}>20 questões</option>
+              </select>
+              <button
+                onClick={handleStartSim}
+                disabled={simLoading}
+                className="btn-primary text-sm py-3 w-full disabled:opacity-60 font-semibold"
+              >
+                {simLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block mr-2" /> : '▶'}
+                {simLoading ? 'Carregando...' : 'Iniciar Simulado'}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <select
-              className="input-field text-sm py-2 w-36"
-              value={simPhase}
-              onChange={e => setSimPhase(e.target.value)}
-            >
-              {PHASES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
-            <select
-              className="input-field text-sm py-2 w-20"
-              value={simCount}
-              onChange={e => setSimCount(Number(e.target.value))}
-            >
-              {subjects.filter(s => s).map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <button
-              onClick={handleStartSim}
-              disabled={simLoading}
-              className="btn-primary text-sm py-2 px-5 whitespace-nowrap disabled:opacity-60"
-            >
-              {simLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Iniciar'}
-            </button>
+        </div>
+
+        <div className="card-glass rounded-2xl p-5 border border-blue-600/20">
+          <div className="flex flex-col h-full justify-between">
+            <div>
+              <h3 className="text-white font-bold flex items-center gap-2 text-lg"><BarChart2 size={20} className="text-blue-400" /> Seu Desempenho</h3>
+              <p className="text-gray-400 text-sm mt-1">Estatísticas de resposta</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
+                <p className="text-emerald-400 text-2xl font-bold">{stats.correct_attempts}</p>
+                <p className="text-gray-400 text-xs mt-1">Respostas certas</p>
+              </div>
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-center">
+                <p className="text-red-400 text-2xl font-bold">{stats.total_attempts - stats.correct_attempts}</p>
+                <p className="text-gray-400 text-xs mt-1">Respostas erradas</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap items-center">
-        <Filter size={14} className="text-gray-500" />
-        <select
-          className="input-field text-sm py-2 w-44"
-          value={filterPhase}
-          onChange={e => setFilterPhase(e.target.value)}
-        >
-          {PHASES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-        </select>
-        <select
-          className="input-field text-sm py-2 w-44"
-          value={filterSubject}
-          onChange={e => setFilterSubject(e.target.value)}
-        >
-          <option value="">Todas as matérias</option>
-          {subjects.filter(s => s).map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <span className="text-gray-600 text-sm">{questions.length} questões</span>
+      <div className="card-glass rounded-2xl p-4 border border-white/5">
+        <div className="flex gap-3 items-center flex-wrap">
+          <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Filtrar:</span>
+          <select
+            className="input-field text-xs py-1.5 px-3"
+            value={filterPhase}
+            onChange={e => setFilterPhase(e.target.value)}
+          >
+            {PHASES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+          <select
+            className="input-field text-xs py-1.5 px-3"
+            value={filterSubject}
+            onChange={e => setFilterSubject(e.target.value)}
+          >
+            <option value="">Todas as matérias</option>
+            {subjects.filter(s => s).map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <div className="ml-auto">
+            <span className="text-primary-400 font-semibold text-sm">{questions.length}</span>
+            <span className="text-gray-500 text-xs ml-1">questões</span>
+          </div>
+        </div>
       </div>
 
       {loading ? (
