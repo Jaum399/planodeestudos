@@ -22,6 +22,16 @@ const COLLECTION_FILES = {
   pdfFolders: 'pdfFolders.db',
   pdfDocuments: 'pdfDocuments.db',
   pdfChunks: 'pdfChunks.db',
+  cardReviews: 'cardReviews.db',
+  publicDeckLibrary: 'publicDeckLibrary.db',
+  leaderboards: 'leaderboards.db',
+  userAchievements: 'userAchievements.db',
+  studyRecommendations: 'studyRecommendations.db',
+  deckSharing: 'deckSharing.db',
+  mockExams: 'mockExams.db',
+  userFavoriteDecks: 'userFavoriteDecks.db',
+  deckRatings: 'deckRatings.db',
+  deckImportHistory: 'deckImportHistory.db',
 };
 
 function clone(value) {
