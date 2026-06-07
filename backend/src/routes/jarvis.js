@@ -4,7 +4,7 @@ const { getDatabase } = require('../database');
 const { authenticate, requireAccess } = require('../middleware/auth');
 const { enqueueReminderNotifications, processDueNotificationJobs } = require('../services/reminderNotifications');
 const { createFlashcardsForTheme } = require('../services/flashcardGeneration');
-const gemini = require('../services/geminiService');
+const aiProvider = require('../services/aiProvider');
 
 const router = express.Router();
 router.use(authenticate, requireAccess);
@@ -986,9 +986,9 @@ router.post('/chat', async (req, res) => {
     } else if (intent === 'mindmap_suggest') {
       reply = generateMapSuggestion(mapData, req.user, flow);
     } else {
-      if (gemini.isAvailable()) {
+      if (aiProvider.isAvailable()) {
         try {
-          reply = await gemini.generateJarvisResponse({
+          reply = await aiProvider.generateJarvisResponse({
             userMessage: text,
             user: req.user,
             track,
@@ -1000,7 +1000,7 @@ router.post('/chat', async (req, res) => {
             flow,
           });
         } catch (err) {
-          console.warn('[Jarvis] Gemini falhou, usando template:', err.message);
+          console.warn('[Jarvis] AI generation falhou, usando template:', err.message);
         }
       }
       if (!reply) {

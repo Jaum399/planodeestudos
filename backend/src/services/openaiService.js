@@ -1,43 +1,56 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const axios = require('axios');
 
-const MODEL_ID = 'gemini-2.0-flash';
+const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const TIMEOUT_MS = 12000;
-
-let genAI = null;
-
-function getGenAI() {
-  if (!process.env.GEMINI_API_KEY) return null;
-  if (!genAI) genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  return genAI;
-}
+const MODEL_ID = 'gpt-4o-mini'; // Faster, cost-effective model with good quality
 
 function isAvailable() {
-  return Boolean(process.env.GEMINI_API_KEY);
+  return Boolean(process.env.OPENAI_API_KEY);
 }
 
-async function callGemini(prompt, systemInstruction = null) {
-  const ai = getGenAI();
-  if (!ai) throw new Error('GEMINI_NOT_CONFIGURED');
+async function callOpenAI(prompt, systemInstruction = null) {
+  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_NOT_CONFIGURED');
 
-  const modelConfig = { model: MODEL_ID };
-  if (systemInstruction) modelConfig.systemInstruction = systemInstruction;
+  const messages = [];
+  if (systemInstruction) {
+    messages.push({ role: 'system', content: systemInstruction });
+  }
+  messages.push({ role: 'user', content: prompt });
 
-  const model = ai.getGenerativeModel(modelConfig);
+  try {
+    const response = await axios.post(
+      `${OPENAI_BASE_URL}/chat/completions`,
+      {
+        model: MODEL_ID,
+        messages,
+        temperature: 0.7,
+        max_tokens: 2000,
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: TIMEOUT_MS,
+      },
+    );
 
-  const result = await Promise.race([
-    model.generateContent(prompt),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), TIMEOUT_MS)),
-  ]);
-
-  return result.response.text().trim();
+    return response.data.choices[0].message.content.trim();
+  } catch (error) {
+    if (error.response?.status === 429) throw new Error('OPENAI_RATE_LIMIT');
+    if (error.code === 'ECONNABORTED') throw new Error('OPENAI_TIMEOUT');
+    throw error;
+  }
 }
-
-// ── Flashcard Generation ──────────────────────────────────────────────────────
 
 async function generateFlashcardsWithAI({ theme, subject, quantity, sourceText }) {
   const contextBlock = sourceText
     ? `Base as perguntas principalmente no seguinte conteúdo:\n\n${sourceText.slice(0, 3000)}\n\n`
     : '';
+
+  const systemInstruction = `Você é um especialista em criar flashcards para estudo médico de alta qualidade, similar ao padrão MedSimple.
+Crie perguntas e respostas que sejam específicas, testáveis e clinicamente relevantes.
+Priorize clareza, precisão e valor educacional acima de criatividade.`;
 
   const prompt = `${contextBlock}Gere exatamente ${quantity} flashcards de estudo de alta qualidade sobre "${theme}" para a matéria de ${subject}.
 
@@ -62,9 +75,9 @@ EXEMPLOS DE QUALIDADE ALTA:
 ✅ Bom: "Qual é o critério qSOFA para sepse e qual score indica risco alto de morte em 30 dias?" → "Altered mental status, SBP ≤100 mmHg, RR ≥22. Score ≥2 = risco alto de morte (>40%)"
 
 - Use português brasileiro
-- Priorize clareza e precisão acima de criatividade`;
+- Priorize clareza e precisão`;
 
-  const raw = await callGemini(prompt);
+  const raw = await callOpenAI(prompt, systemInstruction);
 
   const cleaned = raw
     .replace(/^```json\s*/i, '')
@@ -80,8 +93,6 @@ EXEMPLOS DE QUALIDADE ALTA:
     answer: String(item.answer || '').trim(),
   })).filter((item) => item.question.length > 5 && item.answer.length > 5);
 }
-
-// ── Study Summarization ───────────────────────────────────────────────────────
 
 async function generateSummaryWithAI({ text, title, subject }) {
   const prompt = `Analise o seguinte texto acadêmico sobre "${title}"${subject ? ` (${subject})` : ''} e retorne SOMENTE um JSON válido, sem markdown:
@@ -100,7 +111,7 @@ Regras:
 Texto:
 ${text.slice(0, 4000)}`;
 
-  const raw = await callGemini(prompt);
+  const raw = await callOpenAI(prompt);
 
   const cleaned = raw
     .replace(/^```json\s*/i, '')
@@ -116,15 +127,13 @@ ${text.slice(0, 4000)}`;
   };
 }
 
-// ── Jarvis / Tigas Chat ───────────────────────────────────────────────────────
-
-function buildJarvisSystemPrompt(user, track, trackHint) {
+async function generateJarvisResponse({ userMessage, user, track, trackHint, smartContext, mapData, history, intent, flow }) {
   const firstName = user.name.split(' ')[0];
   const area = user.area || 'área não definida';
   const goal = user.goal || 'meta não definida';
   const weeklyHours = user.weekly_goal_hours || 20;
 
-  return `Você é o Tigas, o assistente de estudos inteligente do app Ordex.
+  const systemInstruction = `Você é o Tigas, o assistente de estudos inteligente do app Ordex.
 Sua missão é apoiar ${firstName} com clareza, motivação e direção estratégica nos estudos.
 
 PERFIL DO ALUNO:
@@ -141,24 +150,21 @@ REGRAS DE RESPOSTA:
 - Não ofereça criar lembretes, flashcards ou tarefas (isso é feito por comandos específicos).
 - Responda sempre em português brasileiro.
 - Nunca quebre o personagem Tigas.`;
-}
 
-function buildJarvisContextBlock(smartContext, mapData) {
-  const parts = [];
-
+  const contextParts = [];
   if (smartContext) {
     if (smartContext.dueFlashcards > 0) {
-      parts.push(`- ${smartContext.dueFlashcards} flashcards pendentes para revisão`);
+      contextParts.push(`- ${smartContext.dueFlashcards} flashcards pendentes para revisão`);
     }
     if (smartContext.todoCount > 0) {
-      parts.push(`- ${smartContext.todoCount} tarefas ativas no Planner`);
+      contextParts.push(`- ${smartContext.todoCount} tarefas ativas no Planner`);
     }
     if (smartContext.weakest && smartContext.weakest.total >= 4) {
-      parts.push(`- Matéria mais fraca: ${smartContext.weakest.subject} (${smartContext.weakest.accuracy}% de acerto)`);
+      contextParts.push(`- Matéria mais fraca: ${smartContext.weakest.subject} (${smartContext.weakest.accuracy}% de acerto)`);
     }
     if (smartContext.nextReminder) {
       const when = new Date(smartContext.nextReminder.dueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-      parts.push(`- Próximo prazo: "${smartContext.nextReminder.title}" em ${when}`);
+      contextParts.push(`- Próximo prazo: "${smartContext.nextReminder.title}" em ${when}`);
     }
   }
 
@@ -166,16 +172,10 @@ function buildJarvisContextBlock(smartContext, mapData) {
     const completed = mapData.nodes.filter((n) => n.completed).length;
     const total = mapData.nodes.length;
     const pct = Math.round((completed / total) * 100);
-    parts.push(`- Mapa Mental: ${pct}% concluído (${mapData.total_xp || 0} XP)`);
+    contextParts.push(`- Mapa Mental: ${pct}% concluído (${mapData.total_xp || 0} XP)`);
   }
 
-  return parts.length > 0 ? `\nCONTEXTO DE ESTUDO ATUAL:\n${parts.join('\n')}` : '';
-}
-
-async function generateJarvisResponse({ userMessage, user, track, trackHint, smartContext, mapData, history, intent, flow }) {
-  const systemInstruction = buildJarvisSystemPrompt(user, track, trackHint);
-  const contextBlock = buildJarvisContextBlock(smartContext, mapData);
-
+  const contextBlock = contextParts.length > 0 ? `\nCONTEXTO DE ESTUDO ATUAL:\n${contextParts.join('\n')}` : '';
   const historyBlock = (history || [])
     .slice(-8)
     .map((h) => `${h.role === 'user' ? 'Aluno' : 'Tigas'}: ${h.content}`)
@@ -183,14 +183,13 @@ async function generateJarvisResponse({ userMessage, user, track, trackHint, sma
 
   const prompt = `${contextBlock}
 
-${historyBlock ? `HISTÓRICO RECENTE:\n${historyBlock}\n` : ''}
-INTENÇÃO DETECTADA: ${intent}
+${historyBlock ? `HISTÓRICO RECENTE:\n${historyBlock}\n` : ''}INTENÇÃO DETECTADA: ${intent}
 TOM NECESSÁRIO: ${flow}
 
 Aluno: ${userMessage}
 Tigas:`;
 
-  return callGemini(prompt, systemInstruction);
+  return callOpenAI(prompt, systemInstruction);
 }
 
 module.exports = {

@@ -3,7 +3,7 @@ const { randomUUID } = require('crypto');
 const { getDatabase } = require('../database');
 const { authenticate, requireAccess } = require('../middleware/auth');
 const { createFlashcardsForTheme } = require('../services/flashcardGeneration');
-const gemini = require('../services/geminiService');
+const aiProvider = require('../services/aiProvider');
 
 const router = express.Router();
 router.use(authenticate, requireAccess);
@@ -64,6 +64,17 @@ function topSubjectsByWeakness(attempts) {
     .sort((a, b) => a.accuracy - b.accuracy)
     .slice(0, 3);
 }
+
+// GET /api/study-tools/ai-status
+router.get('/ai-status', async (req, res) => {
+  try {
+    const status = aiProvider.getStatus();
+    return res.json(status);
+  } catch (error) {
+    console.error('AI status error:', error);
+    return res.status(500).json({ error: 'Erro ao verificar status da IA' });
+  }
+});
 
 // GET /api/study-tools/mnemonics
 router.get('/mnemonics', async (req, res) => {
@@ -133,11 +144,11 @@ router.post('/summarize', async (req, res) => {
     if (!title || !text) return res.status(400).json({ error: 'title e text são obrigatórios' });
 
     let generated;
-    if (gemini.isAvailable()) {
+    if (aiProvider.isAvailable()) {
       try {
-        generated = await gemini.generateSummaryWithAI({ text, title, subject });
+        generated = await aiProvider.generateSummaryWithAI({ text, title, subject });
       } catch (err) {
-        console.warn('[Summarize] Gemini falhou, usando extração local:', err.message);
+        console.warn('[Summarize] AI generation falhou, usando extração local:', err.message);
       }
     }
     if (!generated || generated.bullets.length === 0) {

@@ -1,6 +1,6 @@
 const { randomUUID } = require('crypto');
 const { getDatabase } = require('../database');
-const gemini = require('./geminiService');
+const aiProvider = require('./aiProvider');
 
 const STOP_WORDS = new Set([
   'de', 'da', 'do', 'dos', 'das', 'a', 'o', 'e', 'em', 'para', 'por', 'com', 'no', 'na', 'nos', 'nas',
@@ -147,16 +147,16 @@ async function createFlashcardsForTheme({ userId, theme, subject, quantity, deck
 
   let cardPairs = null;
 
-  if (gemini.isAvailable()) {
+  if (aiProvider.isAvailable()) {
     try {
-      cardPairs = await gemini.generateFlashcardsWithAI({
+      cardPairs = await aiProvider.generateFlashcardsWithAI({
         theme: effectiveTheme,
         subject: safeSubject,
         quantity: safeQty,
         sourceText: normalizedSource || null,
       });
     } catch (err) {
-      console.warn('[Flashcard] Gemini falhou, usando templates:', err.message);
+      console.warn('[Flashcard] AI generation falhou, usando templates:', err.message);
     }
   }
 
