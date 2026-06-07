@@ -2,6 +2,7 @@ const express = require('express');
 const { randomUUID } = require('crypto');
 const { getDatabase } = require('../database');
 const { authenticate, requireAccess } = require('../middleware/auth');
+const aiRecommendations = require('../services/aiRecommendations');
 
 const router = express.Router();
 
@@ -109,6 +110,7 @@ async function generateRecommendations(userId) {
     publicDeckLibrary,
     mockExams,
     studyRecommendations,
+    questionAttempts,
   } = getDatabase();
 
   const user = await users.findOne({ _id: userId });
@@ -117,10 +119,145 @@ async function generateRecommendations(userId) {
   const recommendations = [];
   const now = new Date().toISOString();
 
-  // 1. Recommend weak area topics
+  try {
+    // Build user analysis from study data
+    const userCards = await flashcards.find({ user_id: userId }).toArray();
+    const attempts = await questionAttempts.find({ user_id: userId }).toArray();
+
+    // Calculate subject accuracy
+    const subjectAccuracy = {};
+    attempts.forEach(attempt => {
+      const subject = attempt.subject || 'Geral';
+      if (!subjectAccuracy[subject]) {
+        subjectAccuracy[subject] = { correct: 0, total: 0 };
+      }
+      subjectAccuracy[subject].total += 1;
+      if (attempt.is_correct) subjectAccuracy[subject].correct += 1;
+    });
+
+    // Convert to percentages
+    const accuracyBySubject = {};
+    Object.entries(subjectAccuracy).forEach(([subject, stats]) => {
+      accuracyBySubject[subject] = Math.round((stats.correct / stats.total) * 100);
+    });
+
+    // Prepare user stats for analysis
+    const userStats = {
+      subjectAccuracy: accuracyBySubject,
+      totalFlashcardsReviewed: userCards.length,
+      totalTimeMinutes: userCards.reduce((sum, card) => sum + (card.review_time_minutes || 0), 0),
+      overallAccuracy: Object.values(accuracyBySubject).length > 0
+        ? Math.round(Object.values(accuracyBySubject).reduce((a, b) => a + b, 0) / Object.values(accuracyBySubject).length)
+        : 0,
+    };
+
+    // Use AI to analyze user learning pattern
+    const userAnalysis = await aiRecommendations.analyzeUserLearningPattern(userStats);
+
+    // Get available decks
+    const availableDecks = await publicDeckLibrary
+      .find({ visibility: 'published' })
+      .sort({ rating: -1, usage_count: -1 })
+      .limit(50)
+      .toArray();
+
+    // Use AI to suggest relevant decks
+    const aiSuggestions = await aiRecommendations.suggestDecksWithAI(
+      userAnalysis,
+      availableDecks,
+      user
+    );
+
+    // Convert AI suggestions to database format
+    for (const suggestion of aiSuggestions) {
+      const deck = availableDecks.find(d => d._id.toString() === suggestion.deck_id.toString());
+      if (deck) {
+        const existing = await studyRecommendations.findOne({
+          user_id: userId,
+          type: 'deck',
+          target_id: deck._id,
+        });
+
+        if (!existing) {
+          recommendations.push({
+            _id: randomUUID(),
+            user_id: userId,
+            type: 'deck',
+            target_id: deck._id,
+            target_name: deck.title,
+            reason: suggestion.reason,
+            justification: suggestion.justification,
+            confidence: suggestion.confidence,
+            dismissed: false,
+            clicked: false,
+            created_at: now,
+          });
+        }
+      }
+    }
+
+    // If AI recommendations are sparse, add fallback trending decks
+    if (recommendations.length < 3) {
+      const trendingDecks = await publicDeckLibrary
+        .find({ visibility: 'published' })
+        .sort({ imports: -1 })
+        .limit(3)
+        .toArray();
+
+      for (const deck of trendingDecks) {
+        const existing = await studyRecommendations.findOne({
+          user_id: userId,
+          type: 'deck',
+          target_id: deck._id,
+        });
+
+        if (!existing && !recommendations.some(r => r.target_id.toString() === deck._id.toString())) {
+          recommendations.push({
+            _id: randomUUID(),
+            user_id: userId,
+            type: 'deck',
+            target_id: deck._id,
+            target_name: deck.title,
+            reason: 'trending',
+            confidence: 0.65,
+            dismissed: false,
+            clicked: false,
+            created_at: now,
+          });
+        }
+      }
+    }
+  } catch (aiError) {
+    console.warn('[Recommendations] AI analysis failed, using fallback heuristic:', aiError.message);
+    // Fall back to heuristic recommendations if AI fails
+    return generateHeuristicRecommendations(userId);
+  }
+
+  // Insert recommendations
+  if (recommendations.length > 0) {
+    try {
+      await studyRecommendations.insertMany(recommendations);
+    } catch (insertError) {
+      if (insertError.code !== 11000) throw insertError;
+    }
+  }
+
+  return recommendations;
+}
+
+// Fallback heuristic recommendations
+async function generateHeuristicRecommendations(userId) {
+  const {
+    flashcards,
+    publicDeckLibrary,
+    studyRecommendations,
+  } = getDatabase();
+
+  const recommendations = [];
+  const now = new Date().toISOString();
+
   const userCards = await flashcards.find({ user_id: userId }).toArray();
   if (userCards.length > 0) {
-    // Find subjects with lowest accuracy
     const subjectStats = {};
     userCards.forEach(card => {
       const subject = card.subject || 'Geral';
@@ -128,7 +265,6 @@ async function generateRecommendations(userId) {
         subjectStats[subject] = { correct: 0, total: 0 };
       }
       subjectStats[subject].total += 1;
-      // Assume cards with high ease_factor were answered correctly more often
       if (card.ease_factor > 2.5) subjectStats[subject].correct += 1;
     });
 
@@ -140,7 +276,6 @@ async function generateRecommendations(userId) {
       .filter(s => s.accuracy < 0.75)
       .sort((a, b) => a.accuracy - b.accuracy);
 
-    // Find public decks for weak subjects
     for (const weak of weakSubjects.slice(0, 2)) {
       const decks = await publicDeckLibrary
         .find({
@@ -175,7 +310,6 @@ async function generateRecommendations(userId) {
     }
   }
 
-  // 2. Recommend trending decks
   const trendingDecks = await publicDeckLibrary
     .find({ visibility: 'published' })
     .sort({ imports: -1 })
@@ -189,7 +323,7 @@ async function generateRecommendations(userId) {
       target_id: deck._id,
     });
 
-    if (!existing) {
+    if (!existing && !recommendations.some(r => r.target_id.toString() === deck._id.toString())) {
       recommendations.push({
         _id: randomUUID(),
         user_id: userId,
@@ -205,9 +339,12 @@ async function generateRecommendations(userId) {
     }
   }
 
-  // Insert recommendations
   if (recommendations.length > 0) {
-    await studyRecommendations.insertMany(recommendations);
+    try {
+      await studyRecommendations.insertMany(recommendations);
+    } catch (insertError) {
+      if (insertError.code !== 11000) throw insertError;
+    }
   }
 
   return recommendations;

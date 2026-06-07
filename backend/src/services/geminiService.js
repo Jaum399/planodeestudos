@@ -1,7 +1,22 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { FLASHCARD_PROMPTS, JARVIS_PROMPTS, SUMMARY_PROMPTS } = require('../config/aiPrompts');
 
 const MODEL_ID = 'gemini-2.0-flash';
-const TIMEOUT_MS = 12000;
+
+// Operation-specific timeout constants (ms)
+const TIMEOUTS = {
+  flashcard: 15000,
+  jarvis: 10000,
+  summary: 12000,
+  recommendation: 8000,
+  default: 12000,
+};
+
+// Retry configuration
+const RETRY_CONFIG = {
+  maxRetries: 2,
+  backoff: [500, 1000], // ms between retries
+};
 
 let genAI = null;
 
@@ -15,201 +30,240 @@ function isAvailable() {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
-async function callGemini(prompt, systemInstruction = null) {
-  const ai = getGenAI();
-  if (!ai) throw new Error('GEMINI_NOT_CONFIGURED');
+// Wrapper for retry logic with exponential backoff
+async function withRetry(operation, maxRetries = RETRY_CONFIG.maxRetries) {
+  let lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        const delayMs = RETRY_CONFIG.backoff[attempt] || RETRY_CONFIG.backoff[RETRY_CONFIG.backoff.length - 1];
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError;
+}
 
-  const modelConfig = { model: MODEL_ID };
-  if (systemInstruction) modelConfig.systemInstruction = systemInstruction;
+async function callGemini(prompt, systemInstruction = null, options = {}) {
+  const { timeout = TIMEOUTS.default, temperature = 0.3, topP = 0.95, topK = 40 } = options;
 
-  const model = ai.getGenerativeModel(modelConfig);
+  return withRetry(async () => {
+    const ai = getGenAI();
+    if (!ai) throw new Error('GEMINI_NOT_CONFIGURED');
 
-  const result = await Promise.race([
-    model.generateContent(prompt),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), TIMEOUT_MS)),
-  ]);
+    const modelConfig = {
+      model: MODEL_ID,
+      generationConfig: {
+        temperature,
+        topP,
+        topK,
+        maxOutputTokens: 2048,
+      },
+    };
+    if (systemInstruction) modelConfig.systemInstruction = systemInstruction;
 
-  return result.response.text().trim();
+    const model = ai.getGenerativeModel(modelConfig);
+
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), timeout)),
+    ]);
+
+    const text = result.response.text().trim();
+    if (!text || text.length < 2) throw new Error('EMPTY_RESPONSE');
+    return text;
+  });
+}
+
+// Parse JSON with multiple fallback strategies
+function parseJsonResponse(raw, fallbackParsingRules = null) {
+  // Strategy 1: Direct parse
+  try {
+    return JSON.parse(raw);
+  } catch (e1) {
+    // Strategy 2: Remove markdown code blocks
+    try {
+      const cleaned = raw
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim();
+      return JSON.parse(cleaned);
+    } catch (e2) {
+      // Strategy 3: Extract array/object with regex
+      try {
+        const arrayMatch = raw.match(/\[\s*{[\s\S]*}\s*\]/);
+        const objectMatch = raw.match(/{\s*"[\s\S]*"[\s\S]*}/);
+        const candidate = arrayMatch ? arrayMatch[0] : objectMatch ? objectMatch[0] : null;
+        if (candidate) return JSON.parse(candidate);
+      } catch (e3) {
+        // Strategy 4: Apply custom parsing rules if provided
+        if (fallbackParsingRules) {
+          try {
+            return fallbackParsingRules(raw);
+          } catch (e4) {
+            throw new Error(`JSON_PARSE_FAILED: ${e1.message}`);
+          }
+        }
+        throw new Error(`JSON_PARSE_FAILED: ${e1.message}`);
+      }
+    }
+  }
+}
+
+// Quality metrics logger
+class QualityMetrics {
+  constructor(operation) {
+    this.operation = operation;
+    this.startTime = Date.now();
+    this.retryCount = 0;
+    this.parseSuccess = false;
+    this.responseLength = 0;
+  }
+
+  record(data) {
+    Object.assign(this, data);
+    this.latency = Date.now() - this.startTime;
+  }
+
+  toLog() {
+    return {
+      operation: this.operation,
+      latency: this.latency,
+      retryCount: this.retryCount,
+      parseSuccess: this.parseSuccess,
+      responseLength: this.responseLength,
+      timestamp: new Date().toISOString(),
+    };
+  }
 }
 
 // ── Flashcard Generation ──────────────────────────────────────────────────────
 
-async function generateFlashcardsWithAI({ theme, subject, quantity, sourceText }) {
-  const contextBlock = sourceText
-    ? `Base as perguntas principalmente no seguinte conteúdo:\n\n${sourceText.slice(0, 3000)}\n\n`
-    : '';
+async function generateFlashcardsWithAI({ theme, subject, quantity, sourceText, domain = 'medical' }) {
+  const metrics = new QualityMetrics('flashcard_generation');
 
-  const prompt = `${contextBlock}Gere exatamente ${quantity} flashcards de estudo de ALTÍSSIMA ESPECIFICIDADE sobre "${theme}" para a matéria de ${subject}.
+  try {
+    // Select appropriate prompt template from centralized config
+    const domainTemplates = FLASHCARD_PROMPTS[domain] || FLASHCARD_PROMPTS.generic;
+    const userPrompt = domainTemplates.user(theme, subject, quantity, sourceText);
+    const systemPrompt = domainTemplates.system;
 
-Retorne SOMENTE um array JSON válido, sem texto antes ou depois, sem markdown, sem \`\`\`:
-[
-  {"question": "pergunta objetiva aqui", "answer": "resposta completa e concisa aqui"},
-  ...
-]
+    const raw = await callGemini(userPrompt, systemPrompt, {
+      timeout: TIMEOUTS.flashcard,
+      temperature: 0.3, // Factual responses need lower temperature
+      topP: 0.95,
+      topK: 40,
+    });
 
-REGRAS DE ESPECIFICIDADE OBRIGATÓRIAS:
-1. NOMEAÇÃO EXATA: Lista NOMES ESPECÍFICOS, não genéricos
-   ❌ Não: "Quais são as artérias?"
-   ✅ Sim: "Qual é a origem da artéria coronária descendente anterior e qual vaso ela origina-se?"
+    metrics.responseLength = raw.length;
 
-2. NÚMEROS E VALORES CONCRETOS
-   ❌ Não: "Qual é o valor normal de glicemia?"
-   ✅ Sim: "Qual é o valor de glicemia em jejum que define diabetes mellitus (OMS 2010)? [≥126 mg/dL]"
+    // Parse JSON with fallback strategies
+    const parsed = parseJsonResponse(raw);
+    if (!Array.isArray(parsed)) throw new Error('Invalid_flashcard_array_response');
 
-3. ESTRUTURAS ANATÔMICAS PRECISAS
-   ❌ Não: "Quais estruturas compõem o coração?"
-   ✅ Sim: "Cite as 4 veias do coração: [Veia cava superior, veia cava inferior, veia coronária, seio coronário]"
+    const validated = parsed
+      .map((item) => ({
+        question: String(item.question || '').trim(),
+        answer: String(item.answer || '').trim(),
+      }))
+      .filter((item) => item.question.length > 5 && item.answer.length > 5);
 
-4. CRITÉRIOS DIAGNÓSTICOS ESPECÍFICOS
-   ❌ Não: "Como diagnosticar sepse?"
-   ✅ Sim: "Qual é o critério qSOFA para sepse? [≥2 de: rebaixamento mental, PAS ≤100, FR ≥22]"
+    if (validated.length === 0) throw new Error('No_valid_flashcards_generated');
 
-5. SEQUÊNCIAS E PASSOS EXATOS
-   ❌ Não: "Qual é o processo de coagulação?"
-   ✅ Sim: "Cite em ordem os passos da cascata de coagulação (primária → secundária → terciária)"
-
-6. DIFERENÇAS CLÍNICAS PRECISAS
-   ❌ Não: "Qual a diferença entre asma e DPOC?"
-   ✅ Sim: "Qual é a principal diferença: reversibilidade em asma vs DPOC irreversível, medida por VEF1 pós-broncodilatador"
-
-ESTRUTURA DE RESPOSTA (máximo 3 frases):
-Frase 1: Resposta direta com número/nome específico
-Frase 2: Contexto clínico OU critério diferencial
-Frase 3: Implicação prática OU validação de prova
-
-EXEMPLOS MÉDICOS DE ALTA QUALIDADE:
-Q: "Quais são as veias do coração?"
-A: "4 veias principais: veia cava superior, veia cava inferior, 4 veias pulmonares e seio coronário. O seio coronário drena o sangue do próprio miocárdio. Memorizar localização: 2 cavas chegam no átrio direito, 4 pulmonares no esquerdo, coronária é própria do ventrículo."
-
-Q: "Qual critério define hipertensão arterial?"
-A: "PAS ≥140 mmHg E/OU PAD ≥90 mmHg em ≥3 ocasiões em consultório (ou média de MAPA). Pré-hipertensão é 120-139/80-89. Importante: medição em repouso 5 min, sem cafeína 30 min antes."
-
-Q: "Cite os critérios de SIRS (resposta inflamatória sistêmica)"
-A: "4 critérios (≥2 presentes): Temp >38°C ou <36°C, FC >90, RR >20 ou PaCO2 <32, Leucócitos >11000 ou <4000. SIRS + infecção = sepse. SIRS isolado pode ter origem não-infecciosa (queimadura, cirurgia)."
-
-- Use português brasileiro com terminologia médica EXATA
-- PROÍBIDO usar expressões vagas: "pode", "geralmente", "muitas vezes", "frequentemente"
-- Priorize: NOMES, NÚMEROS, CRITÉRIOS, EVIDÊNCIAS
-- Cada resposta deve ser válida em prova de concurso médico`;
-
-  const raw = await callGemini(prompt);
-
-  const cleaned = raw
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/```\s*$/i, '')
-    .trim();
-
-  const parsed = JSON.parse(cleaned);
-  if (!Array.isArray(parsed)) throw new Error('Invalid flashcard array response');
-
-  return parsed.map((item) => ({
-    question: String(item.question || '').trim(),
-    answer: String(item.answer || '').trim(),
-  })).filter((item) => item.question.length > 5 && item.answer.length > 5);
+    metrics.parseSuccess = true;
+    metrics.record({ retryCount: 0 });
+    return validated;
+  } catch (error) {
+    metrics.record({ parseSuccess: false, error: error.message });
+    throw error;
+  }
 }
 
 // ── Study Summarization ───────────────────────────────────────────────────────
 
-async function generateSummaryWithAI({ text, title, subject }) {
-  const prompt = `Analise o seguinte texto acadêmico sobre "${title}"${subject ? ` (${subject})` : ''} e retorne SOMENTE um JSON válido, sem markdown:
+async function generateSummaryWithAI({ text, title, subject, level = 'quick' }) {
+  const metrics = new QualityMetrics('summary_generation');
 
+  try {
+    const summaryTemplate = SUMMARY_PROMPTS[level] || SUMMARY_PROMPTS.quick;
+    const prompt = `Analise o seguinte texto acadêmico sobre "${title}"${subject ? ` (${subject})` : ''}:
+
+${text.slice(0, 4000)}
+
+${summaryTemplate}
+
+Retorne SOMENTE um JSON válido, sem markdown:
 {
   "bullets": ["ponto-chave 1", "ponto-chave 2", ...],
   "keyTerms": ["termo1", "termo2", ...],
   "mindmapNodes": ["Nó 1", "Nó 2", ...]
-}
+}`;
 
-Regras:
-- bullets: 5 a 8 pontos-chave resumidos, cada um em uma frase curta e direta
-- keyTerms: 6 a 10 termos-chave mais importantes do texto
-- mindmapNodes: 5 a 6 nós para mapa mental, começando com letra maiúscula
+    const raw = await callGemini(prompt, null, {
+      timeout: TIMEOUTS.summary,
+      temperature: 0.3,
+      topP: 0.95,
+    });
 
-Texto:
-${text.slice(0, 4000)}`;
+    metrics.responseLength = raw.length;
 
-  const raw = await callGemini(prompt);
+    const parsed = parseJsonResponse(raw);
 
-  const cleaned = raw
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/```\s*$/i, '')
-    .trim();
+    const result = {
+      bullets: (Array.isArray(parsed.bullets) ? parsed.bullets : []).map(String).filter(b => b.length > 0),
+      keyTerms: (Array.isArray(parsed.keyTerms) ? parsed.keyTerms : []).map(String).filter(t => t.length > 0),
+      mindmapNodes: (Array.isArray(parsed.mindmapNodes) ? parsed.mindmapNodes : []).map(String).filter(n => n.length > 0),
+    };
 
-  const parsed = JSON.parse(cleaned);
-  return {
-    bullets: Array.isArray(parsed.bullets) ? parsed.bullets.map(String) : [],
-    keyTerms: Array.isArray(parsed.keyTerms) ? parsed.keyTerms.map(String) : [],
-    mindmapNodes: Array.isArray(parsed.mindmapNodes) ? parsed.mindmapNodes.map(String) : [],
-  };
+    if (result.bullets.length === 0 && result.keyTerms.length === 0) {
+      throw new Error('No_summary_data_generated');
+    }
+
+    metrics.parseSuccess = true;
+    metrics.record({ retryCount: 0 });
+    return result;
+  } catch (error) {
+    metrics.record({ parseSuccess: false, error: error.message });
+    throw error;
+  }
 }
 
 // ── Jarvis / Tigas Chat ───────────────────────────────────────────────────────
 
-function buildJarvisSystemPrompt(user, track, trackHint) {
+function buildJarvisSystemPrompt(user, track, trackHint, flow = 'equilibrado') {
   const firstName = user.name.split(' ')[0];
   const area = user.area || 'área não definida';
   const goal = user.goal || 'meta não definida';
   const weeklyHours = user.weekly_goal_hours || 20;
 
-  return `Você é o Tigas, o assistente de estudos inteligente do app Ordex.
-Sua missão é apoiar ${firstName} com clareza, motivação e direção estratégica nos estudos.
+  const basePrompt = JARVIS_PROMPTS.buildSystemPrompt(firstName, area, goal, weeklyHours, track, trackHint);
+  const flowTone = JARVIS_PROMPTS.flowPrompts[flow] || JARVIS_PROMPTS.flowPrompts.equilibrado;
 
-PERFIL DO ALUNO:
-- Nome: ${firstName}
-- Área de estudo: ${area}
-- Objetivo: ${goal}
-- Meta semanal: ${weeklyHours}h
-- Trilha detectada: ${track} → ${trackHint}
-
-REGRAS DE RESPOSTA:
-- Seja direto, motivador e objetivo. Máximo 2 a 3 frases.
-- Sempre personalize pelo nome do aluno.
-- Termine com uma ação concreta ou pergunta de engajamento.
-- Não ofereça criar lembretes, flashcards ou tarefas (isso é feito por comandos específicos).
-- Responda sempre em português brasileiro.
-- Nunca quebre o personagem Tigas.`;
+  return `${basePrompt}\n\n${flowTone}`;
 }
 
 function buildJarvisContextBlock(smartContext, mapData) {
-  const parts = [];
-
-  if (smartContext) {
-    if (smartContext.dueFlashcards > 0) {
-      parts.push(`- ${smartContext.dueFlashcards} flashcards pendentes para revisão`);
-    }
-    if (smartContext.todoCount > 0) {
-      parts.push(`- ${smartContext.todoCount} tarefas ativas no Planner`);
-    }
-    if (smartContext.weakest && smartContext.weakest.total >= 4) {
-      parts.push(`- Matéria mais fraca: ${smartContext.weakest.subject} (${smartContext.weakest.accuracy}% de acerto)`);
-    }
-    if (smartContext.nextReminder) {
-      const when = new Date(smartContext.nextReminder.dueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-      parts.push(`- Próximo prazo: "${smartContext.nextReminder.title}" em ${when}`);
-    }
-  }
-
-  if (mapData && mapData.nodes && mapData.nodes.length > 0) {
-    const completed = mapData.nodes.filter((n) => n.completed).length;
-    const total = mapData.nodes.length;
-    const pct = Math.round((completed / total) * 100);
-    parts.push(`- Mapa Mental: ${pct}% concluído (${mapData.total_xp || 0} XP)`);
-  }
-
-  return parts.length > 0 ? `\nCONTEXTO DE ESTUDO ATUAL:\n${parts.join('\n')}` : '';
+  if (!smartContext && !mapData) return '';
+  return JARVIS_PROMPTS.contextBlock(smartContext, mapData);
 }
 
-async function generateJarvisResponse({ userMessage, user, track, trackHint, smartContext, mapData, history, intent, flow }) {
-  const systemInstruction = buildJarvisSystemPrompt(user, track, trackHint);
-  const contextBlock = buildJarvisContextBlock(smartContext, mapData);
+async function generateJarvisResponse({ userMessage, user, track, trackHint, smartContext, mapData, history, intent, flow = 'equilibrado' }) {
+  const metrics = new QualityMetrics('jarvis_response');
 
-  const historyBlock = (history || [])
-    .slice(-8)
-    .map((h) => `${h.role === 'user' ? 'Aluno' : 'Tigas'}: ${h.content}`)
-    .join('\n');
+  try {
+    const systemInstruction = buildJarvisSystemPrompt(user, track, trackHint, flow);
+    const contextBlock = buildJarvisContextBlock(smartContext, mapData);
 
-  const prompt = `${contextBlock}
+    const historyBlock = (history || [])
+      .slice(-8)
+      .map((h) => `${h.role === 'user' ? 'Aluno' : 'Tigas'}: ${h.content}`)
+      .join('\n');
+
+    const prompt = `${contextBlock}
 
 ${historyBlock ? `HISTÓRICO RECENTE:\n${historyBlock}\n` : ''}
 INTENÇÃO DETECTADA: ${intent}
@@ -218,7 +272,21 @@ TOM NECESSÁRIO: ${flow}
 Aluno: ${userMessage}
 Tigas:`;
 
-  return callGemini(prompt, systemInstruction);
+    const response = await callGemini(prompt, systemInstruction, {
+      timeout: TIMEOUTS.jarvis,
+      temperature: 0.7, // Conversational responses need higher temperature
+      topP: 0.95,
+      topK: 40,
+    });
+
+    metrics.responseLength = response.length;
+    metrics.parseSuccess = true;
+    metrics.record({ retryCount: 0 });
+    return response;
+  } catch (error) {
+    metrics.record({ parseSuccess: false, error: error.message });
+    throw error;
+  }
 }
 
 module.exports = {
@@ -226,4 +294,9 @@ module.exports = {
   generateFlashcardsWithAI,
   generateSummaryWithAI,
   generateJarvisResponse,
+  callGemini,
+  parseJsonResponse,
+  QualityMetrics,
+  TIMEOUTS,
+  RETRY_CONFIG,
 };
