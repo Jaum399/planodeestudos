@@ -492,6 +492,40 @@ deckSharingSchema.index({ deck_id: 1 });
 deckSharingSchema.index({ owner_id: 1 });
 deckSharingSchema.index({ 'shared_with.user_id': 1 });
 
+const userFavoriteDecksSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  deck_id: { type: String, required: true },
+  favorited_at: { type: String, required: true },
+}, { _id: false });
+
+userFavoriteDecksSchema.index({ user_id: 1 });
+userFavoriteDecksSchema.index({ deck_id: 1 });
+
+const deckRatingsSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  deck_id: { type: String, required: true },
+  rating: { type: Number, required: true, min: 1, max: 5 },
+  review: { type: String, default: '' },
+  created_at: { type: String, required: true },
+  updated_at: { type: String, required: true },
+}, { _id: false });
+
+deckRatingsSchema.index({ user_id: 1, deck_id: 1 });
+deckRatingsSchema.index({ deck_id: 1 });
+
+const deckImportHistorySchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  public_deck_id: { type: String, required: true },
+  imported_deck_id: { type: String, required: true },
+  imported_at: { type: String, required: true },
+}, { _id: false });
+
+deckImportHistorySchema.index({ user_id: 1 });
+deckImportHistorySchema.index({ public_deck_id: 1 });
+
 // ── Models ────────────────────────────────────────────────────────────────────
 
 function getModel(name, schema) {
@@ -543,6 +577,9 @@ function getDatabase() {
     userAchievements: getModel('UserAchievement', userAchievementsSchema),
     studyRecommendations: getModel('StudyRecommendation', studyRecommendationsSchema),
     deckSharing: getModel('DeckSharing', deckSharingSchema),
+    userFavoriteDecks: getModel('UserFavoriteDeck', userFavoriteDecksSchema),
+    deckRatings: getModel('DeckRating', deckRatingsSchema),
+    deckImportHistory: getModel('DeckImportHistory', deckImportHistorySchema),
   };
 }
 
