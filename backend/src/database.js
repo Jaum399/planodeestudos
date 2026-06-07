@@ -367,6 +367,134 @@ const dailyGoalProgressSchema = new mongoose.Schema({
 dailyGoalProgressSchema.index({ user_id: 1, goal_id: 1, date: 1 }, { unique: true });
 dailyGoalProgressSchema.index({ user_id: 1, date: 1 });
 
+// ── MEDSIMPLE MIGRATION SCHEMAS ────────────────────────────────────────────────
+
+// Enhanced User Profile (add to users collection)
+// Note: Add these fields to userSchema updates
+
+// Card Reviews Collection (tracks individual card review sessions)
+const cardReviewSchema = new mongoose.Schema({
+  _id: { type: String, required: true }, // composite: user_id_card_id_timestamp
+  user_id: { type: String, required: true },
+  card_id: { type: String, required: true },
+  deck_id: { type: String, required: true },
+  difficulty: { type: Number, min: 0, max: 3, required: true },
+  time_spent_seconds: { type: Number, default: 0 },
+  is_correct: { type: Boolean, required: true },
+  confidence: { type: Number, min: 1, max: 5, default: 3 },
+  new_ease_factor: { type: Number, required: true },
+  new_interval_days: { type: Number, required: true },
+  new_next_review: { type: String, required: true },
+  reviewed_at: { type: String, required: true },
+}, { _id: false });
+
+cardReviewSchema.index({ user_id: 1, reviewed_at: -1 });
+cardReviewSchema.index({ card_id: 1, reviewed_at: -1 });
+cardReviewSchema.index({ deck_id: 1, reviewed_at: -1 });
+
+// Public Deck Library (searchable, shareable decks)
+const publicDeckLibrarySchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  deck_id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+  subject: { type: String, required: true },
+  category: { type: String, default: '' },
+  tags: [String],
+  difficulty: { type: String, enum: ['iniciante', 'intermediario', 'avancado'], default: 'intermediario' },
+  rating: { type: Number, min: 1, max: 5, default: 3 },
+  rating_count: { type: Number, default: 0 },
+  imports: { type: Number, default: 0 },
+  favorites: { type: Number, default: 0 },
+  views: { type: Number, default: 0 },
+  is_verified: { type: Boolean, default: false },
+  verification_notes: { type: String, default: '' },
+  verified_by_admin: { type: String, default: null },
+  visibility: { type: String, enum: ['draft', 'published', 'featured'], default: 'draft' },
+  preview_cards: [String], // First 5 card IDs
+  listed_at: { type: String, required: true },
+  updated_at: { type: String, required: true },
+}, { _id: false });
+
+publicDeckLibrarySchema.index({ subject: 1, difficulty: 1, visibility: 1 });
+publicDeckLibrarySchema.index({ rating: -1, imports: -1 });
+publicDeckLibrarySchema.index({ tags: 1 });
+
+// Leaderboard & Rankings
+const leaderboardSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  period: { type: String, enum: ['daily', 'weekly', 'monthly', 'all_time'], required: true },
+  period_start: { type: String, default: null },
+  period_end: { type: String, default: null },
+  rankings: [{
+    rank: Number,
+    user_id: String,
+    username: String,
+    score: Number,
+    metric: { type: String, enum: ['study_minutes', 'cards_learned', 'accuracy', 'streak'] },
+  }],
+  updated_at: { type: String, required: true },
+}, { _id: false });
+
+leaderboardSchema.index({ period: 1, updated_at: -1 });
+
+// Achievements & Badges
+const userAchievementsSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  achievement_id: { type: String, required: true },
+  achievement_name: { type: String, required: true },
+  achievement_icon: { type: String, default: '' },
+  achievement_description: { type: String, default: '' },
+  type: { type: String, enum: ['milestone', 'streak', 'perfection', 'collection', 'social'], required: true },
+  unlocked_at: { type: String, required: true },
+  progress: { type: Number, default: 0 },
+  progress_max: { type: Number, default: 0 },
+  is_featured: { type: Boolean, default: false },
+  created_at: { type: String, required: true },
+}, { _id: false });
+
+userAchievementsSchema.index({ user_id: 1, unlocked_at: -1 });
+userAchievementsSchema.index({ user_id: 1, type: 1 });
+
+// Study Recommendations
+const studyRecommendationsSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  type: { type: String, enum: ['deck', 'question_set', 'weakness_topic', 'peer_deck'], required: true },
+  target_id: { type: String, required: true },
+  target_name: { type: String, required: true },
+  reason: { type: String, enum: ['weak_area', 'trending', 'peer_favorite', 'based_on_goals'], required: true },
+  confidence: { type: Number, min: 0, max: 1, default: 0.5 },
+  dismissed: { type: Boolean, default: false },
+  clicked: { type: Boolean, default: false },
+  created_at: { type: String, required: true },
+  dismissed_at: { type: String, default: null },
+}, { _id: false });
+
+studyRecommendationsSchema.index({ user_id: 1, dismissed: 1, created_at: -1 });
+
+// Deck Sharing Permissions
+const deckSharingSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  deck_id: { type: String, required: true },
+  owner_id: { type: String, required: true },
+  shared_with: [{
+    user_id: String,
+    permission: { type: String, enum: ['view', 'edit'] },
+    shared_at: String,
+  }],
+  is_public: { type: Boolean, default: false },
+  public_url: { type: String, default: null },
+  created_at: { type: String, required: true },
+  updated_at: { type: String, required: true },
+}, { _id: false });
+
+deckSharingSchema.index({ deck_id: 1 });
+deckSharingSchema.index({ owner_id: 1 });
+deckSharingSchema.index({ 'shared_with.user_id': 1 });
+
 // ── Models ────────────────────────────────────────────────────────────────────
 
 function getModel(name, schema) {
@@ -410,6 +538,14 @@ function getDatabase() {
     pdfChunks: getModel('PdfChunk', pdfChunkSchema),
     userGoals: getModel('UserGoal', userGoalsSchema),
     dailyGoalProgress: getModel('DailyGoalProgress', dailyGoalProgressSchema),
+
+    // MedSimple Migration Models
+    cardReviews: getModel('CardReview', cardReviewSchema),
+    publicDeckLibrary: getModel('PublicDeckLibrary', publicDeckLibrarySchema),
+    leaderboards: getModel('Leaderboard', leaderboardSchema),
+    userAchievements: getModel('UserAchievement', userAchievementsSchema),
+    studyRecommendations: getModel('StudyRecommendation', studyRecommendationsSchema),
+    deckSharing: getModel('DeckSharing', deckSharingSchema),
   };
 }
 

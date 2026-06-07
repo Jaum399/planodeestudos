@@ -29,6 +29,7 @@ const pdfRoutes = require('./routes/pdfs');
 const publicRoutes = require('./routes/public');
 const lessonsRoutes = require('./routes/lessons');
 const goalsRoutes = require('./routes/goals');
+const publicDecksRoutes = require('./routes/publicDecks');
 
 const { initializeDatabase } = require('./database');
 
@@ -79,6 +80,7 @@ app.use('/api/public', publicRoutes);
 // Rotas de aulas/vídeos
 app.use('/api/lessons', lessonsRoutes);
 app.use('/api/goals', goalsRoutes);
+app.use('/api/public-decks', publicDecksRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
