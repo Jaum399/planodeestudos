@@ -1,302 +1,223 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { FLASHCARD_PROMPTS, JARVIS_PROMPTS, SUMMARY_PROMPTS } = require('../config/aiPrompts');
+const axios = require('axios');
 
-const MODEL_ID = 'gemini-2.0-flash';
-
-// Operation-specific timeout constants (ms)
-const TIMEOUTS = {
-  flashcard: 15000,
-  jarvis: 10000,
-  summary: 12000,
-  recommendation: 8000,
-  default: 12000,
-};
-
-// Retry configuration
-const RETRY_CONFIG = {
-  maxRetries: 2,
-  backoff: [500, 1000], // ms between retries
-};
-
-let genAI = null;
-
-function getGenAI() {
-  if (!process.env.GEMINI_API_KEY) return null;
-  if (!genAI) genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  return genAI;
-}
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const MODEL_ID = 'gemini-1.5-flash'; // Fast, free tier available
+const TIMEOUT_MS = 12000;
 
 function isAvailable() {
-  return Boolean(process.env.GEMINI_API_KEY);
+  return Boolean(process.env.GOOGLE_GEMINI_API_KEY);
 }
 
-// Wrapper for retry logic with exponential backoff
-async function withRetry(operation, maxRetries = RETRY_CONFIG.maxRetries) {
-  let lastError;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await operation();
-    } catch (err) {
-      lastError = err;
-      if (attempt < maxRetries) {
-        const delayMs = RETRY_CONFIG.backoff[attempt] || RETRY_CONFIG.backoff[RETRY_CONFIG.backoff.length - 1];
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
-    }
+async function callGemini(prompt, systemInstruction = null) {
+  if (!process.env.GOOGLE_GEMINI_API_KEY) {
+    throw new Error('GEMINI_NOT_CONFIGURED');
   }
-  throw lastError;
-}
 
-async function callGemini(prompt, systemInstruction = null, options = {}) {
-  const { timeout = TIMEOUTS.default, temperature = 0.3, topP = 0.95, topK = 40 } = options;
+  const fullPrompt = systemInstruction
+    ? `${systemInstruction}\n\nUser request: ${prompt}`
+    : prompt;
 
-  return withRetry(async () => {
-    const ai = getGenAI();
-    if (!ai) throw new Error('GEMINI_NOT_CONFIGURED');
-
-    const modelConfig = {
-      model: MODEL_ID,
-      generationConfig: {
-        temperature,
-        topP,
-        topK,
-        maxOutputTokens: 2048,
+  try {
+    const response = await axios.post(
+      `${GEMINI_API_URL}/${MODEL_ID}:generateContent`,
+      {
+        contents: [
+          {
+            parts: [
+              {
+                text: fullPrompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          topP: 0.95,
+          topK: 40,
+        },
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+        ],
       },
-    };
-    if (systemInstruction) modelConfig.systemInstruction = systemInstruction;
-
-    const model = ai.getGenerativeModel(modelConfig);
-
-    const result = await Promise.race([
-      model.generateContent(prompt),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), timeout)),
-    ]);
-
-    const text = result.response.text().trim();
-    if (!text || text.length < 2) throw new Error('EMPTY_RESPONSE');
-    return text;
-  });
-}
-
-// Parse JSON with multiple fallback strategies
-function parseJsonResponse(raw, fallbackParsingRules = null) {
-  // Strategy 1: Direct parse
-  try {
-    return JSON.parse(raw);
-  } catch (e1) {
-    // Strategy 2: Remove markdown code blocks
-    try {
-      const cleaned = raw
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/```\s*$/i, '')
-        .trim();
-      return JSON.parse(cleaned);
-    } catch (e2) {
-      // Strategy 3: Extract array/object with regex
-      try {
-        const arrayMatch = raw.match(/\[\s*{[\s\S]*}\s*\]/);
-        const objectMatch = raw.match(/{\s*"[\s\S]*"[\s\S]*}/);
-        const candidate = arrayMatch ? arrayMatch[0] : objectMatch ? objectMatch[0] : null;
-        if (candidate) return JSON.parse(candidate);
-      } catch (e3) {
-        // Strategy 4: Apply custom parsing rules if provided
-        if (fallbackParsingRules) {
-          try {
-            return fallbackParsingRules(raw);
-          } catch (e4) {
-            throw new Error(`JSON_PARSE_FAILED: ${e1.message}`);
-          }
-        }
-        throw new Error(`JSON_PARSE_FAILED: ${e1.message}`);
+      {
+        params: {
+          key: process.env.GOOGLE_GEMINI_API_KEY,
+        },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: TIMEOUT_MS,
       }
+    );
+
+    if (!response.data.candidates || !response.data.candidates[0]?.content?.parts[0]?.text) {
+      throw new Error('GEMINI_EMPTY_RESPONSE');
     }
-  }
-}
 
-// Quality metrics logger
-class QualityMetrics {
-  constructor(operation) {
-    this.operation = operation;
-    this.startTime = Date.now();
-    this.retryCount = 0;
-    this.parseSuccess = false;
-    this.responseLength = 0;
-  }
-
-  record(data) {
-    Object.assign(this, data);
-    this.latency = Date.now() - this.startTime;
-  }
-
-  toLog() {
-    return {
-      operation: this.operation,
-      latency: this.latency,
-      retryCount: this.retryCount,
-      parseSuccess: this.parseSuccess,
-      responseLength: this.responseLength,
-      timestamp: new Date().toISOString(),
-    };
-  }
-}
-
-// ── Flashcard Generation ──────────────────────────────────────────────────────
-
-async function generateFlashcardsWithAI({ theme, subject, quantity, sourceText, domain = 'medical' }) {
-  const metrics = new QualityMetrics('flashcard_generation');
-
-  try {
-    // Select appropriate prompt template from centralized config
-    const domainTemplates = FLASHCARD_PROMPTS[domain] || FLASHCARD_PROMPTS.generic;
-    const userPrompt = domainTemplates.user(theme, subject, quantity, sourceText);
-    const systemPrompt = domainTemplates.system;
-
-    const raw = await callGemini(userPrompt, systemPrompt, {
-      timeout: TIMEOUTS.flashcard,
-      temperature: 0.3, // Factual responses need lower temperature
-      topP: 0.95,
-      topK: 40,
-    });
-
-    metrics.responseLength = raw.length;
-
-    // Parse JSON with fallback strategies
-    const parsed = parseJsonResponse(raw);
-    if (!Array.isArray(parsed)) throw new Error('Invalid_flashcard_array_response');
-
-    const validated = parsed
-      .map((item) => ({
-        question: String(item.question || '').trim(),
-        answer: String(item.answer || '').trim(),
-      }))
-      .filter((item) => item.question.length > 5 && item.answer.length > 5);
-
-    if (validated.length === 0) throw new Error('No_valid_flashcards_generated');
-
-    metrics.parseSuccess = true;
-    metrics.record({ retryCount: 0 });
-    return validated;
+    return response.data.candidates[0].content.parts[0].text.trim();
   } catch (error) {
-    metrics.record({ parseSuccess: false, error: error.message });
+    if (error.response?.status === 429) {
+      throw new Error('GEMINI_RATE_LIMIT');
+    }
+    if (error.response?.status === 403) {
+      throw new Error('GEMINI_INVALID_API_KEY');
+    }
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('GEMINI_TIMEOUT');
+    }
+    console.error('Gemini API Error:', error.message);
     throw error;
   }
 }
 
-// ── Study Summarization ───────────────────────────────────────────────────────
+async function generateFlashcardsWithAI({ theme, subject, quantity, sourceText }) {
+  const contextBlock = sourceText
+    ? `Base as perguntas principalmente no seguinte conteúdo:\n\n${sourceText.slice(0, 3000)}\n\n`
+    : '';
 
-async function generateSummaryWithAI({ text, title, subject, level = 'quick' }) {
-  const metrics = new QualityMetrics('summary_generation');
+  const systemInstruction = `Você é um especialista em criar flashcards para estudo médico de ALTÍSSIMA ESPECIFICIDADE.
+Gere respostas NUNCA genéricas: sempre com nomes específicos, números exatos, critérios precisos.
+Cada resposta deve ser válida em prova de concurso médico.`;
+
+  const prompt = `${contextBlock}Gere exatamente ${quantity} flashcards de estudo de ALTÍSSIMA ESPECIFICIDADE sobre "${theme}" para a matéria de ${subject}.
+
+Retorne SOMENTE um array JSON válido, sem texto antes ou depois, sem markdown, sem \`\`\`:
+[
+  {"question": "pergunta objetiva aqui", "answer": "resposta completa e concisa aqui"},
+  ...
+]`;
 
   try {
-    const summaryTemplate = SUMMARY_PROMPTS[level] || SUMMARY_PROMPTS.quick;
-    const prompt = `Analise o seguinte texto acadêmico sobre "${title}"${subject ? ` (${subject})` : ''}:
-
-${text.slice(0, 4000)}
-
-${summaryTemplate}
-
-Retorne SOMENTE um JSON válido, sem markdown:
-{
-  "bullets": ["ponto-chave 1", "ponto-chave 2", ...],
-  "keyTerms": ["termo1", "termo2", ...],
-  "mindmapNodes": ["Nó 1", "Nó 2", ...]
-}`;
-
-    const raw = await callGemini(prompt, null, {
-      timeout: TIMEOUTS.summary,
-      temperature: 0.3,
-      topP: 0.95,
-    });
-
-    metrics.responseLength = raw.length;
-
-    const parsed = parseJsonResponse(raw);
-
-    const result = {
-      bullets: (Array.isArray(parsed.bullets) ? parsed.bullets : []).map(String).filter(b => b.length > 0),
-      keyTerms: (Array.isArray(parsed.keyTerms) ? parsed.keyTerms : []).map(String).filter(t => t.length > 0),
-      mindmapNodes: (Array.isArray(parsed.mindmapNodes) ? parsed.mindmapNodes : []).map(String).filter(n => n.length > 0),
-    };
-
-    if (result.bullets.length === 0 && result.keyTerms.length === 0) {
-      throw new Error('No_summary_data_generated');
+    const response = await callGemini(prompt, systemInstruction);
+    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      throw new Error('INVALID_JSON_RESPONSE');
     }
-
-    metrics.parseSuccess = true;
-    metrics.record({ retryCount: 0 });
-    return result;
+    return JSON.parse(jsonMatch[0]);
   } catch (error) {
-    metrics.record({ parseSuccess: false, error: error.message });
+    console.error('Error generating flashcards:', error.message);
     throw error;
   }
 }
 
-// ── Jarvis / Tigas Chat ───────────────────────────────────────────────────────
+async function generateSummaryWithAI({ content, length = 'medium', language = 'pt-BR' }) {
+  const lengthGuide = {
+    short: '2-3 parágrafos',
+    medium: '4-6 parágrafos',
+    long: '8-12 parágrafos',
+  };
 
-function buildJarvisSystemPrompt(user, track, trackHint, flow = 'equilibrado') {
-  const firstName = user.name.split(' ')[0];
-  const area = user.area || 'área não definida';
-  const goal = user.goal || 'meta não definida';
-  const weeklyHours = user.weekly_goal_hours || 20;
+  const systemInstruction = `Você é um especialista em criar resumos educacionais de ALTA QUALIDADE.
+Resumos devem ser claros, concisos, com estrutura lógica e destacando conceitos-chave.`;
 
-  const basePrompt = JARVIS_PROMPTS.buildSystemPrompt(firstName, area, goal, weeklyHours, track, trackHint);
-  const flowTone = JARVIS_PROMPTS.flowPrompts[flow] || JARVIS_PROMPTS.flowPrompts.equilibrado;
+  const prompt = `Crie um resumo de ${lengthGuide[length] || lengthGuide.medium} para:
 
-  return `${basePrompt}\n\n${flowTone}`;
-}
+"${content.slice(0, 4000)}"
 
-function buildJarvisContextBlock(smartContext, mapData) {
-  if (!smartContext && !mapData) return '';
-  return JARVIS_PROMPTS.contextBlock(smartContext, mapData);
-}
-
-async function generateJarvisResponse({ userMessage, user, track, trackHint, smartContext, mapData, history, intent, flow = 'equilibrado' }) {
-  const metrics = new QualityMetrics('jarvis_response');
+Mantenha informações importantes, use **negrito** para conceitos-chave.`;
 
   try {
-    const systemInstruction = buildJarvisSystemPrompt(user, track, trackHint, flow);
-    const contextBlock = buildJarvisContextBlock(smartContext, mapData);
-
-    const historyBlock = (history || [])
-      .slice(-8)
-      .map((h) => `${h.role === 'user' ? 'Aluno' : 'Tigas'}: ${h.content}`)
-      .join('\n');
-
-    const prompt = `${contextBlock}
-
-${historyBlock ? `HISTÓRICO RECENTE:\n${historyBlock}\n` : ''}
-INTENÇÃO DETECTADA: ${intent}
-TOM NECESSÁRIO: ${flow}
-
-Aluno: ${userMessage}
-Tigas:`;
-
-    const response = await callGemini(prompt, systemInstruction, {
-      timeout: TIMEOUTS.jarvis,
-      temperature: 0.7, // Conversational responses need higher temperature
-      topP: 0.95,
-      topK: 40,
-    });
-
-    metrics.responseLength = response.length;
-    metrics.parseSuccess = true;
-    metrics.record({ retryCount: 0 });
-    return response;
+    return await callGemini(prompt, systemInstruction);
   } catch (error) {
-    metrics.record({ parseSuccess: false, error: error.message });
+    console.error('Error generating summary:', error.message);
+    throw error;
+  }
+}
+
+async function generateJarvisResponse({ userMessage, context = '', conversationHistory = [] }) {
+  const systemInstruction = `Você é Jarvis, assistente de IA educacional especializado em medicina.
+
+PERSONALIDADE: Amigável, empático, preciso, proativo em sugerir recursos.
+FUNÇÕES: Responder dúvidas, sugerir estratégias, dar feedback, motivar, recomendar recursos.
+REGRAS: Respostas 150-300 palavras, use 1-2 emojis máx, seja honesto se não souber.`;
+
+  const prompt = `Usuário: "${userMessage}"
+
+Responda de forma acessível, educacional e motivadora. Se relevante, sugira próximos passos.`;
+
+  try {
+    return await callGemini(prompt, systemInstruction);
+  } catch (error) {
+    console.error('Error generating Jarvis response:', error.message);
+    throw error;
+  }
+}
+
+async function generateQuizWithAI({ topic, subject, difficulty = 'medium', quantity = 5 }) {
+  const difficultyMap = {
+    easy: 'fácil (básica, conceitual)',
+    medium: 'média (aplicada, casos clínicos simples)',
+    hard: 'difícil (análise crítica, casos complexos)',
+  };
+
+  const systemInstruction = `Você é especialista em criar questões de múltipla escolha de ALTA QUALIDADE.
+Questões devem ter uma única resposta correta clara, distractores plausíveis, e explicação detalhada.`;
+
+  const prompt = `Gere ${quantity} questões de múltipla escolha nível ${difficultyMap[difficulty]} sobre "${topic}" em ${subject}.
+
+Retorne SOMENTE JSON (sem markdown):
+[
+  {
+    "question": "Texto da questão",
+    "options": [
+      {"label": "A", "text": "opção A"},
+      {"label": "B", "text": "opção B"},
+      {"label": "C", "text": "opção C"},
+      {"label": "D", "text": "opção D"},
+      {"label": "E", "text": "opção E"}
+    ],
+    "correctAnswer": "A",
+    "explanation": "Explicação clara"
+  }
+]`;
+
+  try {
+    const response = await callGemini(prompt, systemInstruction);
+    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      throw new Error('INVALID_JSON_RESPONSE');
+    }
+    return JSON.parse(jsonMatch[0]);
+  } catch (error) {
+    console.error('Error generating quiz:', error.message);
+    throw error;
+  }
+}
+
+async function generateStudyPlanWithAI({ goal, currentLevel, timeAvailable, subject }) {
+  const systemInstruction = `Você é especialista em educação e planejamento de estudo.
+Planos devem ser realistas, progressivos e motivadores.`;
+
+  const prompt = `Crie um plano de estudo com:
+- Objetivo: ${goal}
+- Nível atual: ${currentLevel}
+- Tempo: ${timeAvailable}
+- Matéria: ${subject}
+
+Inclua: semanas, tópicos em ordem, recursos recomendados, marcos de progresso, dicas de motivação.`;
+
+  try {
+    return await callGemini(prompt, systemInstruction);
+  } catch (error) {
+    console.error('Error generating study plan:', error.message);
     throw error;
   }
 }
 
 module.exports = {
   isAvailable,
+  callGemini,
   generateFlashcardsWithAI,
   generateSummaryWithAI,
   generateJarvisResponse,
-  callGemini,
-  parseJsonResponse,
-  QualityMetrics,
-  TIMEOUTS,
-  RETRY_CONFIG,
+  generateQuizWithAI,
+  generateStudyPlanWithAI,
 };
