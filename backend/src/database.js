@@ -335,8 +335,37 @@ const pdfChunkSchema = new mongoose.Schema({
   created_at: { type: String, required: true },
 }, { _id: false });
 
-pdfChunkSchema.index({ document_id: 1, chunk_index: 1 }, { unique: true });
-pdfChunkSchema.index({ user_id: 1, document_id: 1, chunk_index: 1 });
+pdfChunkSchema.index({ document_id: 1, document_id: 1, chunk_index: 1 });
+
+const userGoalsSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  goal_name: { type: String, required: true },
+  goal_type: { type: String, enum: ['daily', 'weekly', 'monthly'], default: 'daily' },
+  target_value: { type: Number, required: true },
+  target_unit: { type: String, enum: ['cards', 'minutes'], required: true },
+  current_progress: { type: Number, default: 0 },
+  status: { type: String, enum: ['active', 'completed', 'abandoned'], default: 'active' },
+  started_at: { type: String, required: true },
+  created_at: { type: String, required: true },
+  updated_at: { type: String, required: true },
+}, { _id: false });
+
+userGoalsSchema.index({ user_id: 1, status: 1 });
+userGoalsSchema.index({ user_id: 1, started_at: 1 });
+
+const dailyGoalProgressSchema = new mongoose.Schema({
+  _id: { type: String, required: true }, // `${user_id}_${goal_id}_${date}`
+  user_id: { type: String, required: true },
+  goal_id: { type: String, required: true },
+  date: { type: String, required: true }, // YYYY-MM-DD
+  progress_value: { type: Number, default: 0 },
+  completed: { type: Boolean, default: false },
+  recorded_at: { type: String, required: true },
+}, { _id: false });
+
+dailyGoalProgressSchema.index({ user_id: 1, goal_id: 1, date: 1 }, { unique: true });
+dailyGoalProgressSchema.index({ user_id: 1, date: 1 });
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -379,6 +408,8 @@ function getDatabase() {
     pdfFolders: getModel('PdfFolder', pdfFolderSchema),
     pdfDocuments: getModel('PdfDocument', pdfDocumentSchema),
     pdfChunks: getModel('PdfChunk', pdfChunkSchema),
+    userGoals: getModel('UserGoal', userGoalsSchema),
+    dailyGoalProgress: getModel('DailyGoalProgress', dailyGoalProgressSchema),
   };
 }
 

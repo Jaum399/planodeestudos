@@ -227,6 +227,20 @@ export const studyToolsApi = {
   dailyPlan: () => api.get('/study-tools/daily-plan'),
 };
 
+// Goals
+export const goalsApi = {
+  list: () => api.get('/goals'),
+  create: (data: { goal_name: string; goal_type: string; target_value: number; target_unit: string }) =>
+    api.post('/goals', data),
+  getDailySummary: () => api.get('/goals/daily-summary'),
+  getProgress: (id: string, days?: number) =>
+    api.get(`/goals/${id}/progress`, { params: { days } }),
+  updateProgress: (id: string) =>
+    api.post(`/goals/${id}/update-progress`),
+  update: (id: string, data: any) => api.put(`/goals/${id}`, data),
+  delete: (id: string) => api.delete(`/goals/${id}`),
+};
+
 // PDF Library
 export const pdfApi = {
   list: () => api.get('/pdf-library'),

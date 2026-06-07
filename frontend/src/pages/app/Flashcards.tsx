@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BookOpen, Clock3, Plus, Target, TrendingUp, X } from 'lucide-react';
-import { flashcardDecksApi, flashcardsApi } from '../../services/api';
+import { flashcardDecksApi, flashcardsApi, goalsApi } from '../../services/api';
+import GoalTracker from '../../components/GoalTracker';
 import type {
   Flashcard,
   FlashcardDeck,
@@ -62,6 +63,9 @@ export default function Flashcards() {
   const [deckLoading, setDeckLoading] = useState(false);
   const [deckForm, setDeckForm] = useState({ name: '', color: '#7c3aed', description: '' });
 
+  const [dailyGoal, setDailyGoal] = useState<any>(null);
+  const [todayProgress, setTodayProgress] = useState(0);
+
   const deckTiles = useMemo<DeckTile[]>(() => {
     const base = decks.map((deck) => ({
       id: deck.id,
@@ -108,9 +112,10 @@ export default function Flashcards() {
   async function loadDecksAndProgress() {
     setLoading(true);
     try {
-      const [decksRes, progressRes] = await Promise.all([
+      const [decksRes, progressRes, goalsRes] = await Promise.all([
         flashcardDecksApi.getAll(),
         flashcardsApi.getProgress(),
+        goalsApi.getDailySummary().catch(() => ({ data: { goals: [] } })),
       ]);
 
       setDecks(Array.isArray(decksRes.data?.decks) ? decksRes.data.decks : []);
@@ -120,6 +125,15 @@ export default function Flashcards() {
       setRecentDecks(Array.isArray(progressRes.data?.recentDecks) ? progressRes.data.recentDecks : []);
       setDueTodayDecks(Array.isArray(progressRes.data?.dueTodayDecks) ? progressRes.data.dueTodayDecks : []);
       setSummary(progressRes.data?.summary || EMPTY_SUMMARY);
+
+      if (goalsRes.data?.goals?.length > 0) {
+        const goal = goalsRes.data.goals[0];
+        setDailyGoal(goal);
+        setTodayProgress(goal.today_progress || 0);
+      } else {
+        setDailyGoal(null);
+        setTodayProgress(0);
+      }
     } catch {
       setDecks([]);
       setUncategorizedCount(0);
@@ -127,6 +141,8 @@ export default function Flashcards() {
       setRecentDecks([]);
       setDueTodayDecks([]);
       setSummary(EMPTY_SUMMARY);
+      setDailyGoal(null);
+      setTodayProgress(0);
     } finally {
       setLoading(false);
     }
@@ -163,6 +179,18 @@ export default function Flashcards() {
     if (!currentCard) return;
     try {
       await flashcardsApi.review(currentCard.id, difficulty);
+
+      // Update goal progress if goal exists
+      if (dailyGoal && dailyGoal._id) {
+        try {
+          const goalRes = await goalsApi.updateProgress(dailyGoal._id);
+          setTodayProgress(goalRes.data?.progress_value || todayProgress + 1);
+        } catch {
+          // Goal update failed, but card review succeeded
+          setTodayProgress(todayProgress + 1);
+        }
+      }
+
       setFlipped(false);
       setTimeout(() => {
         setCurrentIdx((idx) => idx + 1);
@@ -282,6 +310,8 @@ export default function Flashcards() {
             </div>
           </article>
         </section>
+
+        {dailyGoal && <GoalTracker goal={dailyGoal} todayProgress={todayProgress} onUpdate={loadDecksAndProgress} />}
 
         <section className="card-glass rounded-2xl p-5 border border-white/10">
           <div className="flex items-center justify-between mb-4">
