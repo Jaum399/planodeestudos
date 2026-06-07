@@ -28,6 +28,7 @@ const routeImporters = {
   lessons: () => import('../pages/app/Lessons'),
   stories: () => import('../pages/app/Stories'),
   goalsManager: () => import('../pages/app/GoalsManager'),
+  publicDecks: () => import('../pages/app/PublicDecks'),
 };
 
 const routePrefetchMap: Record<string, () => Promise<unknown>> = {
@@ -60,6 +61,7 @@ const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/app/lessons': routeImporters.lessons,
   '/app/stories': routeImporters.stories,
   '/app/goals': routeImporters.goalsManager,
+  '/app/public-decks': routeImporters.publicDecks,
 };
 
 const prefetchedRoutes = new Set<string>();
