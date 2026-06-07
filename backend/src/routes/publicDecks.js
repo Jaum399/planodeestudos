@@ -163,14 +163,11 @@ router.use(authenticate, requireAccess);
 // Import public deck to user collection
 router.post('/:id/import', async (req, res) => {
   try {
-    const { publicDeckLibrary, flashcardDecks, flashcards } = getDatabase();
+    const { publicDeckLibrary, flashcardDecks, flashcards, deckImportHistory } = getDatabase();
     const { id } = req.params;
 
     const publicDeck = await publicDeckLibrary.findOne({ _id: id });
     if (!publicDeck) return res.status(404).json({ error: 'Deck não encontrado' });
-
-    // Increment import count
-    await publicDeckLibrary.updateOne({ _id: id }, { $inc: { imports: 1 } });
 
     // Get original deck details
     const originalDeck = await flashcardDecks.findOne({ _id: publicDeck.deck_id });
@@ -179,7 +176,7 @@ router.post('/:id/import', async (req, res) => {
     // Create new deck copy for user
     const newDeckId = randomUUID();
     const now = new Date().toISOString();
-    const newDeck = new flashcardDecks({
+    const newDeck = {
       _id: newDeckId,
       user_id: req.user.id,
       name: `${publicDeck.title} (importado)`,
@@ -188,20 +185,32 @@ router.post('/:id/import', async (req, res) => {
       category: publicDeck.category,
       color: originalDeck.color || '#7c3aed',
       difficulty_level: publicDeck.difficulty,
+      is_public: false,
+      card_count: 0,
       created_at: now,
       updated_at: now,
-    });
-    await newDeck.save();
+    };
+    await flashcardDecks.insertOne(newDeck);
 
     // Copy all flashcards from public deck
-    const originalCards = await flashcards.find({ deck_id: publicDeck.deck_id });
+    const originalCards = await flashcards.find({ deck_id: publicDeck.deck_id }).toArray();
     const newCards = originalCards.map(card => {
-      const cardObj = card.toObject ? card.toObject() : { ...card };
+      const cardObj = card.toObject ? card.toObject() : card;
       return {
-        ...cardObj,
         _id: randomUUID(),
         user_id: req.user.id,
         deck_id: newDeckId,
+        question: cardObj.question,
+        answer: cardObj.answer,
+        type: cardObj.type || 'basic',
+        subject: cardObj.subject,
+        difficulty: cardObj.difficulty,
+        ease_factor: 2.5,
+        interval_days: 0,
+        next_review: now,
+        review_count: 0,
+        is_favorite: false,
+        tags: cardObj.tags || [],
         created_at: now,
         updated_at: now,
       };
@@ -209,12 +218,24 @@ router.post('/:id/import', async (req, res) => {
 
     if (newCards.length > 0) {
       await flashcards.insertMany(newCards);
+      await flashcardDecks.updateOne({ _id: newDeckId }, { $set: { card_count: newCards.length } });
     }
+
+    // Update import count and record history
+    await publicDeckLibrary.updateOne({ _id: id }, { $inc: { imports: 1 } });
+    await deckImportHistory.insertOne({
+      _id: randomUUID(),
+      user_id: req.user.id,
+      public_deck_id: id,
+      imported_deck_id: newDeckId,
+      imported_at: now,
+    });
 
     res.status(201).json({
       deck_id: newDeckId,
       deck_name: newDeck.name,
       cards_imported: newCards.length,
+      message: `✅ ${newCards.length} flashcards importados com sucesso!`,
     });
   } catch (error) {
     console.error('Deck import error:', error);
@@ -222,15 +243,33 @@ router.post('/:id/import', async (req, res) => {
   }
 });
 
-// Add deck to favorites
+// Add/Remove deck from user favorites
 router.post('/:id/favorite', async (req, res) => {
   try {
-    const { publicDeckLibrary } = getDatabase();
+    const { userFavoriteDecks, publicDeckLibrary } = getDatabase();
     const { id } = req.params;
     const { add = true } = req.body;
 
-    const increment = add ? 1 : -1;
-    await publicDeckLibrary.updateOne({ _id: id }, { $inc: { favorites: increment } });
+    const favId = `${req.user.id}_${id}`;
+    const now = new Date().toISOString();
+
+    if (add) {
+      // Add to favorites
+      const existing = await userFavoriteDecks.findOne({ _id: favId });
+      if (!existing) {
+        await userFavoriteDecks.insertOne({
+          _id: favId,
+          user_id: req.user.id,
+          deck_id: id,
+          favorited_at: now,
+        });
+        await publicDeckLibrary.updateOne({ _id: id }, { $inc: { favorites: 1 } });
+      }
+    } else {
+      // Remove from favorites
+      await userFavoriteDecks.deleteOne({ _id: favId });
+      await publicDeckLibrary.updateOne({ _id: id }, { $inc: { favorites: -1 } });
+    }
 
     res.json({ success: true, action: add ? 'favorited' : 'unfavorited' });
   } catch (error) {
@@ -239,10 +278,24 @@ router.post('/:id/favorite', async (req, res) => {
   }
 });
 
-// Rate deck
+// Check if user favorited a deck
+router.get('/:id/is-favorite', async (req, res) => {
+  try {
+    const { userFavoriteDecks } = getDatabase();
+    const { id } = req.params;
+
+    const fav = await userFavoriteDecks.findOne({ _id: `${req.user.id}_${id}` });
+    res.json({ is_favorite: !!fav });
+  } catch (error) {
+    console.error('Check favorite error:', error);
+    res.status(500).json({ error: 'Erro ao verificar favorito' });
+  }
+});
+
+// Rate deck (per user)
 router.post('/:id/rate', async (req, res) => {
   try {
-    const { publicDeckLibrary } = getDatabase();
+    const { publicDeckLibrary, deckRatings } = getDatabase();
     const { id } = req.params;
     const { rating, review } = req.body;
 
@@ -253,23 +306,90 @@ router.post('/:id/rate', async (req, res) => {
     const deck = await publicDeckLibrary.findOne({ _id: id });
     if (!deck) return res.status(404).json({ error: 'Deck não encontrado' });
 
-    // Simple rating average (in production, store individual ratings)
-    const currentRatingSum = deck.rating * deck.rating_count;
-    const newRatingCount = deck.rating_count + 1;
-    const newRating = (currentRatingSum + rating) / newRatingCount;
+    const ratingId = `${req.user.id}_${id}`;
+    const now = new Date().toISOString();
 
-    await publicDeckLibrary.updateOne(
-      { _id: id },
-      {
-        $set: { rating: newRating },
-        $inc: { rating_count: 1 },
-      },
-    );
+    // Check if user already rated
+    const existing = await deckRatings.findOne({ _id: ratingId });
 
-    res.json({ success: true, new_rating: newRating.toFixed(1) });
+    if (existing) {
+      // Update existing rating
+      const oldRating = existing.rating;
+      const newAvgRating = (deck.rating * deck.rating_count - oldRating + rating) / deck.rating_count;
+
+      await deckRatings.updateOne(
+        { _id: ratingId },
+        { $set: { rating, review: review || '', updated_at: now } }
+      );
+
+      await publicDeckLibrary.updateOne(
+        { _id: id },
+        { $set: { rating: newAvgRating } }
+      );
+
+      res.json({ success: true, new_rating: newAvgRating.toFixed(1), action: 'updated' });
+    } else {
+      // Create new rating
+      const currentRatingSum = deck.rating * deck.rating_count;
+      const newRatingCount = deck.rating_count + 1;
+      const newRating = (currentRatingSum + rating) / newRatingCount;
+
+      await deckRatings.insertOne({
+        _id: ratingId,
+        user_id: req.user.id,
+        deck_id: id,
+        rating,
+        review: review || '',
+        created_at: now,
+        updated_at: now,
+      });
+
+      await publicDeckLibrary.updateOne(
+        { _id: id },
+        { $set: { rating: newRating }, $inc: { rating_count: 1 } }
+      );
+
+      res.json({ success: true, new_rating: newRating.toFixed(1), action: 'created' });
+    }
   } catch (error) {
     console.error('Rating error:', error);
     res.status(500).json({ error: 'Erro ao avaliar deck' });
+  }
+});
+
+// Get user's rating for a deck
+router.get('/:id/my-rating', async (req, res) => {
+  try {
+    const { deckRatings } = getDatabase();
+    const { id } = req.params;
+
+    const rating = await deckRatings.findOne({ _id: `${req.user.id}_${id}` });
+    res.json({ rating: rating ? rating.rating : 0, review: rating?.review || '' });
+  } catch (error) {
+    console.error('Get rating error:', error);
+    res.status(500).json({ error: 'Erro ao buscar avaliação' });
+  }
+});
+
+// Get all user favorites
+router.get('/user/favorites/list', async (req, res) => {
+  try {
+    const { userFavoriteDecks, publicDeckLibrary } = getDatabase();
+
+    const favorites = await userFavoriteDecks.find({ user_id: req.user.id }).toArray();
+    const deckIds = favorites.map(f => f.deck_id);
+
+    const decks = await publicDeckLibrary.find({ _id: { $in: deckIds } }).toArray();
+
+    const items = decks.map(doc => {
+      const obj = doc.toObject ? doc.toObject() : doc;
+      return { ...obj, id: obj._id };
+    });
+
+    res.json({ items, total: items.length });
+  } catch (error) {
+    console.error('Get favorites error:', error);
+    res.status(500).json({ error: 'Erro ao buscar favoritos' });
   }
 });
 
