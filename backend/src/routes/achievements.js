@@ -217,7 +217,7 @@ router.post('/check-unlock', async (req, res) => {
 
       if (currentValue >= value) {
         // Unlock achievement
-        const ach = new userAchievements({
+        const ach = {
           _id: randomUUID(),
           user_id: req.user.id,
           achievement_id: achievement.id,
@@ -230,9 +230,9 @@ router.post('/check-unlock', async (req, res) => {
           progress_max: value,
           is_featured: false,
           created_at: now,
-        });
+        };
 
-        await userAchievements.insertOne(ach.toObject ? ach.toObject() : ach);
+        await userAchievements.insertOne(ach);
         newlyUnlocked.push(achievement);
       }
     }
