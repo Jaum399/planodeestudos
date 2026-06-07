@@ -53,6 +53,11 @@ export default function CoursePlayer() {
   }, [courseId, lessonId]);
 
   const fetchCourseAndLesson = async () => {
+    if (!courseId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -64,10 +69,12 @@ export default function CoursePlayer() {
       setChapters(chaptersData);
 
       // Find and set current lesson
-      const allLessons = chaptersData.flatMap((ch: Chapter) => ch.lessons);
-      const lesson = allLessons.find((l: Lesson) => l._id === lessonId);
-      if (lesson) {
-        setCurrentLesson(lesson);
+      if (lessonId) {
+        const allLessons = chaptersData.flatMap((ch: Chapter) => ch.lessons);
+        const lesson = allLessons.find((l: Lesson) => l._id === lessonId);
+        if (lesson) {
+          setCurrentLesson(lesson);
+        }
       }
     } catch (err) {
       console.error('Error fetching course:', err);

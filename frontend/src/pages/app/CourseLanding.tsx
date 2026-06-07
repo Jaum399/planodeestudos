@@ -41,7 +41,7 @@ interface Progress {
 }
 
 export default function CourseLanding() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [course, setCourse] = useState<Course | null>(null);
@@ -58,6 +58,8 @@ export default function CourseLanding() {
   }, [id]);
 
   const fetchCourseData = async () => {
+    if (!id) return;
+
     try {
       setLoading(true);
 

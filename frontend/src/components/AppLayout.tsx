@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Layers, Calendar, BarChart2,
-  Settings, LogOut, Menu, BrainCircuit, Zap, Crown, Map, Bot, Sun, Moon, Languages, Bell, Timer, X, Volume2, VolumeX, GraduationCap,
+  Settings, LogOut, Menu, BrainCircuit, Zap, Crown, Map, Bot, Sun, Moon, Languages, Bell, Clock, X, Volume2, VolumeX, GraduationCap,
   Lightbulb, ScrollText, PlayCircle, Sparkles, StickyNote, Users, FileText, Search
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -64,7 +64,7 @@ const navItems = [
   { path: '/app/analytics', labelKey: 'nav_analytics', icon: BarChart2, premium: true },
   { path: '/app/jarvis', labelKey: 'nav_tigas', icon: Bot, premium: true },
   { path: '/app/reminders', labelKey: 'nav_reminders', icon: Bell },
-  { path: '/app/pomodoro', labelKey: 'nav_pomodoro', icon: Timer },
+  { path: '/app/pomodoro', labelKey: 'nav_pomodoro', icon: Clock },
   { path: '/app/mindmap', labelKey: 'nav_mindmap', icon: Map, premium: true },
   { path: '/app/settings', labelKey: 'nav_settings', icon: Settings },
 ];
@@ -475,7 +475,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         aria-label="Navegação principal"
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-5 border-b border-app-border">
+        <div className="h-16 flex items-center justify-between px-5 border-b border-app-border flex-shrink-0">
           <Link to="/app/dashboard" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
               <BrainCircuit size={16} className="text-white" />
@@ -491,8 +491,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {/* Nav - Main scrollable area */}
+        <nav className="flex-1 min-h-0 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-500">
           {navItems.map(({ path, labelKey, icon: Icon, premium }) => {
             return (
               <Link
@@ -522,12 +522,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Upgrade banner for free users */}
         {!isPremium && (
-          <div className="px-3 pb-2">
+          <div className="px-3 pb-2 flex-shrink-0 border-t border-app-border/50 pt-2">
             <Link
               to="/app/upgrade"
               className="flex items-center gap-2 w-full px-4 py-3 rounded-xl bg-gradient-to-r from-primary-600/20 to-primary-800/20 border border-primary-500/30 hover:border-primary-500/60 transition-all group"
             >
-              <Zap size={16} className="text-primary-400 group-hover:text-primary-300" />
+              <Zap size={16} className="text-primary-400 group-hover:text-primary-300 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-white text-xs font-semibold">{t('app_subscribe_premium')}</p>
                 <p className="text-gray-500 text-[10px]">{t('app_from_price')}</p>
@@ -537,7 +537,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
 
         {/* User info */}
-        <div className="p-3 border-t border-app-border">
+        <div className="p-3 border-t border-app-border flex-shrink-0">
           <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
               {user ? getInitials(user.name) : '?'}
