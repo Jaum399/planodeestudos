@@ -526,6 +526,118 @@ const deckImportHistorySchema = new mongoose.Schema({
 deckImportHistorySchema.index({ user_id: 1 });
 deckImportHistorySchema.index({ public_deck_id: 1 });
 
+// ── COURSE SYSTEM SCHEMAS (Fase 1: Aulas Estruturadas) ────────────────────────
+
+const courseSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+  specialization: { type: String, enum: ['medicina', 'odontologia', 'farmácia', 'genérico'], default: 'genérico' },
+  category: { type: String, enum: ['básico', 'intermediário', 'avançado'], default: 'intermediário' },
+  author_id: { type: String, required: true },
+  visibility: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft' },
+  thumbnail: { type: String, default: '' },
+  rating: { type: Number, min: 0, max: 5, default: 0 },
+  rating_count: { type: Number, default: 0 },
+  enrollment_count: { type: Number, default: 0 },
+  prerequisite_courses: [String],
+  total_hours: { type: Number, default: 0 },
+  difficulty: { type: Number, min: 1, max: 10, default: 5 },
+  status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  created_at: { type: String, required: true },
+  updated_at: { type: String, required: true },
+}, { _id: false });
+
+courseSchema.index({ visibility: 1, category: 1 });
+courseSchema.index({ rating: -1, enrollment_count: -1 });
+courseSchema.index({ author_id: 1 });
+
+const chapterSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  course_id: { type: String, required: true },
+  title: { type: String, required: true },
+  order: { type: Number, required: true },
+  description: { type: String, default: '' },
+  estimated_hours: { type: Number, default: 0 },
+  lessons_count: { type: Number, default: 0 },
+  created_at: { type: String, required: true },
+  updated_at: { type: String, required: true },
+}, { _id: false });
+
+chapterSchema.index({ course_id: 1, order: 1 });
+
+const lessonSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  course_id: { type: String, required: true },
+  chapter_id: { type: String, required: true },
+  title: { type: String, required: true },
+  order: { type: Number, required: true },
+  type: { type: String, enum: ['video', 'text', 'interactive', 'quiz'], default: 'text' },
+  content: {
+    video_url: { type: String, default: '' },
+    text_markdown: { type: String, default: '' },
+    embedded_content: { type: String, default: '' },
+  },
+  learning_objectives: [String],
+  estimated_minutes: { type: Number, default: 0 },
+  difficulty: { type: Number, min: 1, max: 10, default: 5 },
+  tags: [String],
+  attachments: [{
+    url: String,
+    name: String,
+  }],
+  created_at: { type: String, required: true },
+  updated_at: { type: String, required: true },
+}, { _id: false });
+
+lessonSchema.index({ course_id: 1, chapter_id: 1, order: 1 });
+
+const courseProgressSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  course_id: { type: String, required: true },
+  status: { type: String, enum: ['not_started', 'in_progress', 'completed'], default: 'not_started' },
+  enrollment_date: { type: String, required: true },
+  completion_date: { type: String, default: null },
+  last_accessed_at: { type: String, default: null },
+  progress_percent: { type: Number, min: 0, max: 100, default: 0 },
+  lessons_completed: { type: Number, default: 0 },
+  total_lessons: { type: Number, default: 0 },
+}, { _id: false });
+
+courseProgressSchema.index({ user_id: 1, course_id: 1 }, { unique: true });
+courseProgressSchema.index({ user_id: 1, status: 1 });
+
+const lessonProgressSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  lesson_id: { type: String, required: true },
+  course_id: { type: String, required: true },
+  started_at: { type: String, required: true },
+  completed_at: { type: String, default: null },
+  time_spent_minutes: { type: Number, default: 0 },
+  is_completed: { type: Boolean, default: false },
+  notes: { type: String, default: '' },
+}, { _id: false });
+
+lessonProgressSchema.index({ user_id: 1, lesson_id: 1 });
+lessonProgressSchema.index({ user_id: 1, course_id: 1 });
+
+const certificateSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  course_id: { type: String, required: true },
+  issue_date: { type: String, required: true },
+  certificate_number: { type: String, required: true, unique: true },
+  pdf_url: { type: String, default: '' },
+  status: { type: String, enum: ['valid', 'revoked'], default: 'valid' },
+  created_at: { type: String, required: true },
+}, { _id: false });
+
+certificateSchema.index({ user_id: 1, created_at: -1 });
+certificateSchema.index({ course_id: 1 });
+certificateSchema.index({ certificate_number: 1 });
+
 // ── Models ────────────────────────────────────────────────────────────────────
 
 function getModel(name, schema) {
@@ -580,6 +692,14 @@ function getDatabase() {
     userFavoriteDecks: getModel('UserFavoriteDeck', userFavoriteDecksSchema),
     deckRatings: getModel('DeckRating', deckRatingsSchema),
     deckImportHistory: getModel('DeckImportHistory', deckImportHistorySchema),
+
+    // Course System (Fase 1)
+    courses: getModel('Course', courseSchema),
+    chapters: getModel('Chapter', chapterSchema),
+    lessons: getModel('Lesson', lessonSchema),
+    courseProgress: getModel('CourseProgress', courseProgressSchema),
+    lessonProgress: getModel('LessonProgress', lessonProgressSchema),
+    certificates: getModel('Certificate', certificateSchema),
   };
 }
 

@@ -35,6 +35,8 @@ const mockExamsRoutes = require('./routes/mockExams');
 const leaderboardsRoutes = require('./routes/leaderboards');
 const achievementsRoutes = require('./routes/achievements');
 const recommendationsRoutes = require('./routes/recommendations');
+const coursesRoutes = require('./routes/courses');
+const certificatesRoutes = require('./routes/certificates');
 
 const { initializeDatabase } = require('./database');
 
@@ -91,6 +93,10 @@ app.use('/api/mock-exams', mockExamsRoutes);
 app.use('/api/leaderboards', leaderboardsRoutes);
 app.use('/api/achievements', achievementsRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
+
+// Rotas de cursos estruturados (Fase 1)
+app.use('/api/courses', coursesRoutes);
+app.use('/api/certificates', certificatesRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

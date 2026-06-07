@@ -1,67 +1,182 @@
 import { useEffect, useState } from 'react';
-import { lessonsApi } from '../../services/api';
-import type { CourseRoadmap } from '../../types';
+import { Search } from 'lucide-react';
+import CourseCard from '../../components/CourseCard';
+
+interface Course {
+  _id: string;
+  title: string;
+  description: string;
+  difficulty: number;
+  rating: number;
+  enrollment_count: number;
+  total_hours: number;
+  progress?: number;
+  category: string;
+}
+
+const CATEGORIES = ['todas', 'medicina', 'direito', 'farmácia', 'odontologia', 'enem'];
+const SPECIALIZATIONS = ['genérico', 'medicina', 'direito', 'farmácia', 'odontologia'];
 
 export default function CoursesPage() {
-  const [tracks, setTracks] = useState<CourseRoadmap[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [filters, setFilters] = useState({
+    category: 'todas',
+    specialization: 'genérico',
+    search: '',
+  });
 
   useEffect(() => {
-    let isMounted = true;
+    fetchCourses();
+  }, []);
 
-    async function loadRoadmap() {
-      try {
-        const { data } = await lessonsApi.getRoadmap();
-        if (!isMounted) return;
-        setTracks(Array.isArray(data) ? data : []);
-      } catch {
-        if (!isMounted) return;
-        setTracks([]);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
+  useEffect(() => {
+    applyFilters();
+  }, [courses, filters]);
+
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/courses?limit=50');
+      const data = await response.json();
+      setCourses(data.courses || []);
+      setError(null);
+    } catch (err) {
+      setError('Erro ao carregar cursos');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = courses;
+
+    if (filters.category !== 'todas') {
+      filtered = filtered.filter((c) => c.category === filters.category);
     }
 
-    loadRoadmap();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    if (filters.specialization !== 'genérico') {
+      filtered = filtered.filter((c) => c.specialization === filters.specialization);
+    }
+
+    if (filters.search.trim()) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (c) =>
+          c.title.toLowerCase().includes(searchLower) ||
+          c.description.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setFilteredCourses(filtered);
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-white">Cursos</h1>
-        <p className="text-gray-400 text-sm mt-1">Trilhas de execução para acelerar evolução sem perder consistência.</p>
+        <h1 className="text-2xl font-bold text-white">Cursos Disponíveis</h1>
+        <p className="text-gray-400 text-sm mt-1">Explore nossos cursos estruturados e comece sua jornada de aprendizado</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        {isLoading ? (
-          <div className="card-glass rounded-2xl p-5 text-sm text-gray-400">Carregando trilhas...</div>
-        ) : tracks.length === 0 ? (
-          <div className="card-glass rounded-2xl p-5 text-sm text-gray-400">Nenhuma trilha disponível no momento.</div>
-        ) : tracks.map((track) => {
-          const firstBlocked = track.lessons.find((lesson) => lesson.unlockedBySequence === false);
-          return (
-            <div key={track._id || track.title} className="card-glass rounded-2xl p-5 card-glow space-y-3">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <h3 className="text-white font-semibold">{track.title}</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-600/20 text-primary-300 border border-primary-500/30">
-                  {track.completion_pct}%
-                </span>
-              </div>
-              <p className="text-sm text-gray-300">{track.description || 'Trilha com execução progressiva por etapas.'}</p>
-              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-primary-500" style={{ width: `${track.completion_pct}%` }} />
-              </div>
-              <p className="text-xs text-gray-400">{track.completed_lessons}/{track.total_lessons} aulas concluídas</p>
-              {firstBlocked && (
-                <p className="text-xs text-amber-300">Próxima etapa bloqueada até concluir as aulas anteriores.</p>
-              )}
-            </div>
-          );
-        })}
+      {/* Search and Filters */}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-3 text-gray-500" size={20} />
+          <input
+            type="text"
+            placeholder="Buscar cursos..."
+            value={filters.search}
+            onChange={(e) => handleFilterChange('search', e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-app-card border border-app-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+          />
+        </div>
+
+        {/* Filter Chips */}
+        <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <span className="text-xs text-gray-400 mt-2">Categoria:</span>
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => handleFilterChange('category', cat)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                  filters.category === cat
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-app-card border border-app-border text-gray-300 hover:border-primary-500/30'
+                }`}
+              >
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-full flex gap-2 flex-wrap">
+            <span className="text-xs text-gray-400 mt-2">Especialidade:</span>
+            {SPECIALIZATIONS.map((spec) => (
+              <button
+                key={spec}
+                onClick={() => handleFilterChange('specialization', spec)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                  filters.specialization === spec
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-app-card border border-app-border text-gray-300 hover:border-primary-500/30'
+                }`}
+              >
+                {spec.charAt(0).toUpperCase() + spec.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* Results Count */}
+      {!loading && (
+        <div className="text-sm text-gray-400">
+          {filteredCourses.length} curso{filteredCourses.length !== 1 ? 's' : ''} encontrado
+          {filters.search && ` para "${filters.search}"`}
+        </div>
+      )}
+
+      {/* Content */}
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="text-gray-400">Carregando cursos...</div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-12">
+          <div className="text-red-400">{error}</div>
+        </div>
+      ) : filteredCourses.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-gray-400">Nenhum curso encontrado</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCourses.map((course) => (
+            <CourseCard
+              key={course._id}
+              id={course._id}
+              title={course.title}
+              description={course.description}
+              difficulty={course.difficulty}
+              rating={course.rating}
+              enrollment_count={course.enrollment_count}
+              total_hours={course.total_hours}
+              progress={course.progress || 0}
+              category={course.category}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
