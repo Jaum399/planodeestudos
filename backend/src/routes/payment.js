@@ -19,24 +19,44 @@ const ASAAS_FAILURE_EVENTS = new Set([
 ]);
 
 const PLAN_STANDARD = 'standard';
-const PLAN_MEDHUB = 'medhub';
+const PLAN_PREMIUM = 'premium';
+const PLAN_PREMIUM_MEDHUB = 'premium_medhub';
 
 function normalizePlanType(value) {
-  return String(value || '').toLowerCase() === PLAN_MEDHUB ? PLAN_MEDHUB : PLAN_STANDARD;
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === PLAN_PREMIUM_MEDHUB || normalized === 'medhub') return PLAN_PREMIUM_MEDHUB;
+  if (normalized === PLAN_PREMIUM || normalized === 'p') return PLAN_PREMIUM;
+  return PLAN_STANDARD;
 }
 
 function getPlanAmount(planType) {
-  const isMedHub = normalizePlanType(planType) === PLAN_MEDHUB;
-  const envValue = isMedHub
-    ? process.env.PREMIUM_MEDHUB_MONTHLY_PRICE
-    : process.env.PREMIUM_MONTHLY_PRICE;
-  const fallback = isMedHub ? 89.9 : 49.9;
+  const normalized = normalizePlanType(planType);
+
+  if (normalized === PLAN_PREMIUM_MEDHUB) {
+    const envValue = process.env.PREMIUM_MEDHUB_MONTHLY_PRICE;
+    const fallback = 89.9;
+    const amount = Number(envValue || fallback);
+    return Number((Number.isFinite(amount) && amount > 0 ? amount : fallback).toFixed(2));
+  }
+
+  if (normalized === PLAN_PREMIUM) {
+    const envValue = process.env.PREMIUM_MONTHLY_PRICE;
+    const fallback = 49.9;
+    const amount = Number(envValue || fallback);
+    return Number((Number.isFinite(amount) && amount > 0 ? amount : fallback).toFixed(2));
+  }
+
+  const envValue = process.env.PREMIUM_STANDARD_MONTHLY_PRICE;
+  const fallback = 50.0;
   const amount = Number(envValue || fallback);
   return Number((Number.isFinite(amount) && amount > 0 ? amount : fallback).toFixed(2));
 }
 
 function resolvePlanSlug(planType) {
-  return normalizePlanType(planType) === PLAN_MEDHUB ? 'premium_medhub' : 'premium';
+  const normalized = normalizePlanType(planType);
+  if (normalized === PLAN_PREMIUM_MEDHUB) return 'premium_medhub';
+  if (normalized === PLAN_PREMIUM) return 'premium';
+  return 'basic';
 }
 
 function getAsaasConfig() {
@@ -302,14 +322,19 @@ router.post('/create-checkout', authenticate, async (req, res) => {
     const customerId = await ensureAsaasCustomer(user, users);
     const baseUrl = process.env.FRONTEND_URL || 'https://app-tigas-entregas.vercel.app';
 
+    let planDescription = 'Ordex Premium - mensal';
+    if (selectedPlanType === PLAN_PREMIUM_MEDHUB) {
+      planDescription = 'Ordex Premium + Centro Medico - mensal';
+    } else if (selectedPlanType === PLAN_STANDARD) {
+      planDescription = 'Ordex Básico - mensal';
+    }
+
     const payload = {
       customer: customerId,
       billingType: getCheckoutBillingType(),
       value: selectedPlanAmount,
       dueDate: getDateYYYYMMDD(0),
-      description: selectedPlanType === PLAN_MEDHUB
-        ? 'Ordex Premium + Centro Medico - mensal'
-        : 'Ordex Premium - mensal',
+      description: planDescription,
       externalReference: req.user.id,
     };
 

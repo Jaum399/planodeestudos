@@ -1,22 +1,70 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Crown, Shield, ArrowLeft, Loader2, Zap, ExternalLink } from 'lucide-react';
+import { Check, Crown, Shield, ArrowLeft, Loader2, Zap, ExternalLink, Star } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { authApi, paymentApi } from '../../services/api';
 import PublicPreferenceControls from '../../components/PublicPreferenceControls';
 import { formatCpfOrCnpj, onlyDigits, safeReadJson } from '../../utils/formAutomation';
 
-type PlanType = 'standard';
+type PlanType = 'standard' | 'premium' | 'premium_medhub';
 
-const PLAN_PRICE = '49,90';
+interface Plan {
+  id: PlanType;
+  name: string;
+  price: string;
+  displayPrice: number;
+  description: string;
+  featured?: boolean;
+  features: string[];
+  comingSoon?: boolean;
+}
 
-const FEATURES = [
-  'Planner Kanban ilimitado',
-  'Flashcards com revisão espaçada (SM-2)',
-  'Simulador cognitivo com IA',
-  'Cronograma automático personalizado',
-  'Análises e estatísticas detalhadas',
-  'Suporte prioritário',
+const PLANS: Plan[] = [
+  {
+    id: 'standard',
+    name: 'Básico',
+    price: '50,00',
+    displayPrice: 50,
+    description: 'Perfeito para começar',
+    features: [
+      'Planner Kanban',
+      'Flashcards com revisão espaçada (SM-2)',
+      'Até 500 cards',
+      'Análises básicas',
+      'Suporte por email',
+    ],
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    price: '49,90',
+    displayPrice: 49.9,
+    description: 'Mais econômico',
+    featured: true,
+    features: [
+      'Tudo do Básico, plus:',
+      'Cards ilimitados',
+      'Simulador cognitivo com IA',
+      'Cronograma automático personalizado',
+      'Análises e estatísticas detalhadas',
+      'Suporte prioritário',
+    ],
+  },
+  {
+    id: 'premium_medhub',
+    name: 'Premium+',
+    price: '89,90',
+    displayPrice: 89.9,
+    description: 'Completo com MedHub',
+    features: [
+      'Tudo do Premium, plus:',
+      'Acesso ao Centro Médico',
+      'Comunidade MedHub',
+      'Recursos avançados de coaching',
+      'Integração com especialistas',
+      'Prioridade máxima de suporte',
+    ],
+  },
 ];
 
 function isValidCpf(doc: string): boolean {
@@ -66,6 +114,7 @@ export default function Upgrade() {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>('premium');
   const [error, setError] = useState('');
   const [billingDocument, setBillingDocument] = useState(() => {
     const fromUser = user?.billingDocument || '';
@@ -82,7 +131,6 @@ export default function Upgrade() {
   }, [billingDocument]);
 
   async function handleSubscribe() {
-    const planType: PlanType = 'standard';
     setLoading(true);
     setError('');
     try {
@@ -92,17 +140,12 @@ export default function Upgrade() {
         return;
       }
 
-      if (user?.plan === 'premium') {
-        setError('Seu plano Premium já está ativo.');
-        return;
-      }
-
       if (cleanDoc !== (user?.billingDocument || '').replace(/\D/g, '')) {
         const profileRes = await authApi.updateMe({ billingDocument: cleanDoc });
         if (profileRes.data?.user) updateUser(profileRes.data.user);
       }
 
-      const res = await paymentApi.createCheckout(planType);
+      const res = await paymentApi.createCheckout(selectedPlan);
       if (res.data.checkout_url) {
         window.location.href = res.data.checkout_url;
       } else {
@@ -136,9 +179,9 @@ export default function Upgrade() {
         <div className="w-20 h-20 rounded-2xl bg-primary-600/20 border border-primary-500/30 flex items-center justify-center mb-5">
           <Crown size={32} className="text-primary-400" />
         </div>
-        <h2 className="text-white text-2xl font-bold public-heading mb-2">Você já tem o plano Premium!</h2>
+        <h2 className="text-white text-2xl font-bold public-heading mb-2">Você já tem um plano Premium!</h2>
         <p className="text-gray-400 mb-6">
-          Plano ativo: <span className="text-primary-400 font-semibold capitalize">Premium</span>
+          Plano ativo: <span className="text-primary-400 font-semibold capitalize">{user?.plan}</span>
         </p>
         <div className="flex gap-3">
           <button onClick={() => navigate('/app/dashboard')} className="btn-primary">
@@ -158,8 +201,10 @@ export default function Upgrade() {
     );
   }
 
+  const selectedPlanObj = PLANS.find(p => p.id === selectedPlan)!;
+
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-8 flex-wrap">
         <div className="flex items-center gap-3">
@@ -170,83 +215,105 @@ export default function Upgrade() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-white text-2xl font-bold public-heading">Assine o Premium</h1>
-            <p className="text-gray-400 text-sm public-subheading">Plano Premium: R$49,90/mês</p>
+            <h1 className="text-white text-2xl font-bold public-heading">Escolha seu plano</h1>
+            <p className="text-gray-400 text-sm public-subheading">Acesso ilimitado ao que você precisa</p>
           </div>
         </div>
         <PublicPreferenceControls compact />
       </div>
 
-      {/* Plan card */}
-      <div className="bg-app-card border border-primary-500/40 rounded-2xl p-8 ring-1 ring-primary-500/20 mb-6">
-        {/* Badge */}
-        <div className="flex justify-center mb-6">
-          <span className="px-4 py-1.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-primary-600 to-primary-800">
-            PLANO MENSAL
-          </span>
-        </div>
-
-        {/* Price */}
-        <div className="text-center mb-8">
-          <div className="flex items-end justify-center gap-1">
-            <span className="text-gray-400 text-lg font-medium mb-1">R$</span>
-            <span className="text-white text-6xl font-extrabold leading-none">{PLAN_PRICE.split(',')[0]}</span>
-            <span className="text-white text-3xl font-bold mb-1">,{PLAN_PRICE.split(',')[1]}</span>
-          </div>
-          <p className="text-gray-500 text-sm mt-2">por mês • Cancele quando quiser</p>
-        </div>
-
-        {/* Features */}
-        <div className="border-t border-app-border pt-6 mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Shield size={16} className="text-primary-400" />
-            <span className="text-gray-300 text-sm font-semibold">Tudo incluso no plano:</span>
-          </div>
-          <div className="space-y-3">
-            {FEATURES.map((f) => (
-              <div key={f} className="flex items-center gap-3 text-sm text-gray-300">
-                <div className="w-5 h-5 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center flex-shrink-0">
-                  <Check size={11} className="text-green-400" />
-                </div>
-                {f}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* CTA */}
-        <div className="mb-4">
-          <label className="block text-gray-400 text-xs font-medium mb-1.5">CPF ou CNPJ para cobrança</label>
-          <input
-            type="text"
-            value={billingDocument}
-            onChange={(e) => setBillingDocument(formatCpfOrCnpj(e.target.value))}
-            placeholder="000.000.000-00 ou 00.000.000/0000-00"
-            className="input-field"
-            maxLength={18}
+      {/* Pricing cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {PLANS.map((plan) => (
+          <button
+            key={plan.id}
+            onClick={() => setSelectedPlan(plan.id as PlanType)}
             disabled={loading}
-          />
-          <p className="text-gray-600 text-xs mt-1">Obrigatório para o Asaas gerar boleto/PIX/cartão.</p>
+            className={`text-left rounded-2xl p-6 border transition-all ${
+              selectedPlan === plan.id
+                ? 'bg-app-card border-primary-500/50 ring-2 ring-primary-500/30'
+                : 'bg-app-card border-app-border hover:border-primary-500/30'
+            } ${plan.featured ? 'md:scale-105 md:z-10' : ''} disabled:opacity-50`}
+          >
+            {/* Featured badge */}
+            {plan.featured && (
+              <div className="flex items-center gap-1.5 mb-3">
+                <Star size={14} className="text-primary-400 fill-primary-400" />
+                <span className="text-xs font-bold text-primary-400">MAIS POPULAR</span>
+              </div>
+            )}
+
+            {/* Plan name */}
+            <h3 className="text-white text-lg font-bold mb-1">{plan.name}</h3>
+            <p className="text-gray-400 text-xs mb-4">{plan.description}</p>
+
+            {/* Price */}
+            <div className="mb-6">
+              <div className="flex items-end gap-0.5">
+                <span className="text-gray-400 text-xs font-medium">R$</span>
+                <span className="text-white text-4xl font-extrabold">{plan.price.split(',')[0]}</span>
+                <span className="text-gray-400 text-base font-semibold">,{plan.price.split(',')[1]}</span>
+              </div>
+              <p className="text-gray-500 text-xs mt-1">por mês</p>
+            </div>
+
+            {/* Features */}
+            <div className="space-y-2">
+              {plan.features.map((feature) => (
+                <div key={feature} className="flex items-start gap-2">
+                  <Check size={14} className="text-green-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-300 text-sm">{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Selection indicator */}
+            {selectedPlan === plan.id && (
+              <div className="mt-6 py-2 rounded-lg bg-primary-600/20 border border-primary-500/30 text-center">
+                <span className="text-xs font-semibold text-primary-400">Selecionado</span>
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Billing form */}
+      <div className="max-w-lg mx-auto bg-app-card border border-app-border rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield size={16} className="text-primary-400" />
+          <h3 className="text-white font-bold">Informações de cobrança</h3>
         </div>
+
+        <label className="block text-gray-400 text-xs font-medium mb-1.5">CPF ou CNPJ</label>
+        <input
+          type="text"
+          value={billingDocument}
+          onChange={(e) => setBillingDocument(formatCpfOrCnpj(e.target.value))}
+          placeholder="000.000.000-00 ou 00.000.000/0000-00"
+          className="input-field mb-4"
+          maxLength={18}
+          disabled={loading}
+        />
+        <p className="text-gray-600 text-xs mb-6">Obrigatório para o Asaas gerar boleto/PIX/cartão.</p>
 
         <button
           onClick={() => handleSubscribe()}
           disabled={loading}
-          className="w-full py-4 rounded-xl font-bold text-white text-base bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-primary-900/30"
+          className="w-full py-4 rounded-xl font-bold text-white text-base bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-primary-900/30 mb-3"
         >
           {loading ? (
             <><Loader2 size={18} className="animate-spin" /> Redirecionando...</>
           ) : (
-            <><Zap size={18} /> Assinar agora — R${PLAN_PRICE}/mês</>
+            <><Zap size={18} /> Assinar {selectedPlanObj.name} — R${selectedPlanObj.price}/mês</>
           )}
         </button>
 
         {error && (
-          <p className="text-red-400 text-sm text-center mt-3">{error}</p>
+          <p className="text-red-400 text-sm text-center mb-3">{error}</p>
         )}
 
-        <p className="text-gray-600 text-xs text-center mt-4">
-          Pagamento seguro via Asaas • Premium liberado após confirmação do pagamento
+        <p className="text-gray-600 text-xs text-center">
+          Pagamento seguro via Asaas • Premium liberado após confirmação do pagamento • Cancele quando quiser
         </p>
       </div>
     </div>

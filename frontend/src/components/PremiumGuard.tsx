@@ -43,7 +43,7 @@ export default function PremiumGuard({ children, feature = 'esta funcionalidade'
           </h2>
           <p className="text-gray-400 text-sm mb-6">
             <span className="text-primary-400 font-medium capitalize">{feature}</span> está disponível apenas para assinantes. Desbloqueie tudo a partir de{' '}
-            <span className="text-white font-semibold">R$49,90/mês</span>.
+            <span className="text-white font-semibold">R$50,00/mês</span> (Plano Básico).
           </p>
 
           {/* Benefits */}
