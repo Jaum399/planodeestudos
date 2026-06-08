@@ -80,8 +80,8 @@ jobs:
           add_env_var "GOOGLE_GEMINI_API_KEY" "$GEMINI_KEY"
           add_env_var "ASAAS_API_KEY" "$ASAAS_KEY"
           add_env_var "PREMIUM_STANDARD_MONTHLY_PRICE" "50.00"
-          add_env_var "PREMIUM_MONTHLY_PRICE" "49.90"
-          add_env_var "PREMIUM_MEDHUB_MONTHLY_PRICE" "89.90"
+          add_env_var "PREMIUM_MONTHLY_PRICE" "75.00"
+          add_env_var "PREMIUM_MEDHUB_MONTHLY_PRICE" "120.00"
 
           echo ""
           echo "✅ Configuração do Vercel concluída!"

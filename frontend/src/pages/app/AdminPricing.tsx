@@ -15,8 +15,8 @@ export default function AdminPricing() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<PlanPrice[]>([
     { type: 'basic', name: 'Plano Básico', price: 50.00, loading: false },
-    { type: 'premium', name: 'Plano Premium', price: 49.90, loading: false },
-    { type: 'medhub', name: 'Plano Premium+ MedHub', price: 89.90, loading: false },
+    { type: 'premium', name: 'Plano Premium', price: 75.00, loading: false },
+    { type: 'medhub', name: 'Plano Premium+ MedHub', price: 120.00, loading: false },
   ]);
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');

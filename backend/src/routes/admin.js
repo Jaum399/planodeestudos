@@ -30,13 +30,13 @@ router.get('/plans', authenticate, requireAdmin, (req, res) => {
       },
       premium: {
         name: 'Plano Premium',
-        price: Number(process.env.PREMIUM_MONTHLY_PRICE || 49.90),
+        price: Number(process.env.PREMIUM_MONTHLY_PRICE || 75.00),
         features: ['Tudo do Básico', 'Analytics', 'Cronograma automático', 'Jarvis IA'],
         billing_cycle: 'monthly',
       },
       premium_medhub: {
         name: 'Plano Premium+ MedHub',
-        price: Number(process.env.PREMIUM_MEDHUB_MONTHLY_PRICE || 89.90),
+        price: Number(process.env.PREMIUM_MEDHUB_MONTHLY_PRICE || 120.00),
         features: ['Tudo do Premium', 'Centro Médico', 'Suporte prioritário'],
         billing_cycle: 'monthly',
       },
@@ -138,8 +138,8 @@ router.get('/status', authenticate, requireAdmin, (req, res) => {
       },
       prices: {
         basic: Number(process.env.PREMIUM_STANDARD_MONTHLY_PRICE || 50.00),
-        premium: Number(process.env.PREMIUM_MONTHLY_PRICE || 49.90),
-        medhub: Number(process.env.PREMIUM_MEDHUB_MONTHLY_PRICE || 89.90),
+        premium: Number(process.env.PREMIUM_MONTHLY_PRICE || 75.00),
+        medhub: Number(process.env.PREMIUM_MEDHUB_MONTHLY_PRICE || 120.00),
       },
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),
