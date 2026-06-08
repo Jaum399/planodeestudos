@@ -1,0 +1,115 @@
+name: 🚀 Auto Setup - Vercel Environment
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'setup-vercel-*.js'
+      - '.github/workflows/auto-setup.yml'
+      - 'backend/src/routes/admin.js'
+  workflow_dispatch:
+    inputs:
+      gemini_key:
+        description: 'Google Gemini API Key (optional, uses secret if not provided)'
+        required: false
+      asaas_key:
+        description: 'Asaas Payment API Key (optional, uses secret if not provided)'
+        required: false
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  setup-vercel:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🔐 Carregar e validar secrets
+        env:
+          GEMINI_KEY: ${{ secrets.GOOGLE_GEMINI_API_KEY || github.event.inputs.gemini_key }}
+          ASAAS_KEY: ${{ secrets.ASAAS_API_KEY || github.event.inputs.asaas_key }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          echo "🔍 Validando configuração de secrets..."
+
+          MISSING_SECRETS=false
+
+          if [ -z "$GEMINI_KEY" ]; then
+            echo "❌ GOOGLE_GEMINI_API_KEY não configurada"
+            MISSING_SECRETS=true
+          else
+            echo "✅ GOOGLE_GEMINI_API_KEY encontrada"
+          fi
+
+          if [ -z "$ASAAS_KEY" ]; then
+            echo "⚠️  ASAAS_API_KEY não configurada (opcional)"
+          else
+            echo "✅ ASAAS_API_KEY encontrada"
+          fi
+
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "❌ VERCEL_TOKEN não configurada"
+            MISSING_SECRETS=true
+          else
+            echo "✅ VERCEL_TOKEN encontrado"
+          fi
+
+          if [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "❌ VERCEL_PROJECT_ID não configurada"
+            MISSING_SECRETS=true
+          else
+            echo "✅ VERCEL_PROJECT_ID encontrado"
+          fi
+
+          if [ "$MISSING_SECRETS" = true ]; then
+            echo ""
+            echo "Configure em: Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+
+      - name: 🚀 Executar setup automático completo
+        env:
+          GOOGLE_GEMINI_API_KEY: ${{ secrets.GOOGLE_GEMINI_API_KEY || github.event.inputs.gemini_key }}
+          ASAAS_API_KEY: ${{ secrets.ASAAS_API_KEY || github.event.inputs.asaas_key }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          PREMIUM_STANDARD_MONTHLY_PRICE: ${{ secrets.PREMIUM_STANDARD_MONTHLY_PRICE || '50.00' }}
+          PREMIUM_MONTHLY_PRICE: ${{ secrets.PREMIUM_MONTHLY_PRICE || '49.90' }}
+          PREMIUM_MEDHUB_MONTHLY_PRICE: ${{ secrets.PREMIUM_MEDHUB_MONTHLY_PRICE || '89.90' }}
+        run: |
+          echo "🚀 Setup automático iniciando..."
+
+          # Usar novo script se existir, senão usar o antigo
+          if [ -f "setup-vercel-full.js" ]; then
+            echo "🚀 Usando setup-vercel-full.js (novo)"
+            node setup-vercel-full.js --auto --ci
+          else
+            echo "🚀 Usando setup-vercel-auto.js (legado)"
+            node setup-vercel-auto.js \
+              --gemini-key "$GOOGLE_GEMINI_API_KEY" \
+              --token "$VERCEL_TOKEN" \
+              --project-id "$VERCEL_PROJECT_ID" \
+              --basic-price "$PREMIUM_STANDARD_MONTHLY_PRICE" \
+              --premium-price "$PREMIUM_MONTHLY_PRICE" \
+              --medhub-price "$PREMIUM_MEDHUB_MONTHLY_PRICE"
+          fi
+
+      - name: ✅ Setup concluído com sucesso
+        run: |
+          echo "🎉 Vercel environment setup concluído!"
+          echo ""
+          echo "📌 Próximos passos:"
+          echo "   1. Verificar: https://vercel.com/dashboard"
+          echo "   2. Deploy será acionado automaticamente"
+          echo "   3. Admin: https://seu-app.vercel.app/app/admin"

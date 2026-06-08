@@ -48,6 +48,7 @@ const AchievementsPage = lazy(routeImporters.achievements);
 const CourseLandingPage = lazy(() => import('./pages/app/CourseLanding'));
 const CoursePlayerPage = lazy(() => import('./pages/app/CoursePlayer'));
 const CertificatesPage = lazy(() => import('./pages/app/Certificates'));
+const AdminPricingPage = lazy(() => import('./pages/app/AdminPricing'));
 
 // Fallback mínimo durante carregamento do chunk
 function PageLoader() {
@@ -455,6 +456,16 @@ export default function App() {
                     <CertificatesPage />
                   </AppLayout>
                 </BlockedGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/admin/pricing"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <AdminPricingPage />
+                </AppLayout>
               </ProtectedRoute>
             }
           />
