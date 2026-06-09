@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Mic, MicOff, Send, Bell, BellOff, Trash2, CheckCircle, Loader2, Radio, Map, Trophy, Zap, Wand2, BookOpen, X } from 'lucide-react';
+import { Mic, MicOff, Send, Bell, BellOff, Trash2, CheckCircle, Loader2, Radio, Map, Trophy, Zap, Wand2, BookOpen, X, Image as ImageIcon } from 'lucide-react';
 import { jarvisApi, mindmapApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePreferences } from '../../contexts/PreferencesContext';
@@ -57,10 +57,13 @@ export default function JarvisPage() {
   const [visionActions, setVisionActions] = useState<NectarAction[]>([]);
   const [showVision, setShowVision] = useState(false);
   const [transientHint, setTransientHint] = useState('');
+  const [imageVisionLoading, setImageVisionLoading] = useState(false);
+  const [imageVisionPreview, setImageVisionPreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const sendMessageRef = useRef<(text: string) => void>(() => {});
   const lastCommandRef = useRef<{ text: string; ts: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reportVoiceFeedback = useCallback(async (feedbackType: 'interrupted' | 'repeated_command' | 'toggled_off') => {
     try {
@@ -301,6 +304,51 @@ export default function JarvisPage() {
     recognition.start();
   }, [listening, sendMessage, language]);
 
+  // ── Vision Mode (Image Analysis) ────────────────────────────────────────────
+  const handleImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImageVisionLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        setImageVisionPreview(base64);
+
+        const userMsg: JarvisMessage = {
+          role: 'user',
+          content: '📸 Analisando imagem...',
+          timestamp: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, userMsg]);
+
+        try {
+          const response = await jarvisApi.visionAnalyze(base64, 'generate_cards');
+          const cardsGenerated = response.data?.cardsGenerated || 0;
+          const jarvisMsg: JarvisMessage = {
+            role: 'jarvis',
+            content: `✅ Criei ${cardsGenerated} flashcards automaticamente a partir da imagem!`,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages(prev => [...prev, jarvisMsg]);
+          setImageVisionPreview(null);
+        } catch (error) {
+          const errMsg: JarvisMessage = {
+            role: 'jarvis',
+            content: 'Erro ao analisar a imagem. Tente novamente.',
+            timestamp: new Date().toISOString(),
+          };
+          setMessages(prev => [...prev, errMsg]);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setImageVisionLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, []);
+
   // ── Reminders ───────────────────────────────────────────────────────────────
   const doneReminder = async (id: string) => {
     await jarvisApi.doneReminder(id);
@@ -461,6 +509,23 @@ export default function JarvisPage() {
               >
                 {listening ? <MicOff size={18} /> : <Mic size={18} />}
               </button>
+
+              {/* Image Upload button */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={imageVisionLoading || loading}
+                className="p-3 rounded-xl border border-app-border text-gray-400 hover:text-purple-400 hover:border-purple-500/30 transition-all disabled:opacity-40"
+                title="Analisar imagem com IA"
+              >
+                {imageVisionLoading ? <Loader2 size={18} className="animate-spin" /> : <ImageIcon size={18} />}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
 
               <input
                 type="text"

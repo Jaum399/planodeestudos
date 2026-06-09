@@ -5,6 +5,7 @@ const { authenticate, requireAccess } = require('../middleware/auth');
 const { enqueueReminderNotifications, processDueNotificationJobs } = require('../services/reminderNotifications');
 const { createFlashcardsForTheme } = require('../services/flashcardGeneration');
 const aiProvider = require('../services/aiProvider');
+const { analyzeImageForFlashcards, explainImageContent } = require('../services/geminiService');
 
 const router = express.Router();
 router.use(authenticate, requireAccess);
@@ -1080,6 +1081,98 @@ router.delete('/reminders/:id', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao deletar lembrete' });
+  }
+});
+
+// ── POST /api/jarvis/vision ──────────────────────────────────────────────────────
+router.post('/vision', async (req, res) => {
+  try {
+    const { imageBase64, command, subject = 'Geral', deckId } = req.body;
+
+    if (!imageBase64) {
+      return res.status(400).json({ error: 'Imagem não fornecida' });
+    }
+
+    if (!command || !['generate_cards', 'explain', 'extract_text'].includes(command)) {
+      return res.status(400).json({ error: 'Comando inválido' });
+    }
+
+    // Detect mime type from base64 header (usually has format like data:image/jpeg;base64,...)
+    let mimeType = 'image/jpeg';
+    if (imageBase64.includes('image/png')) mimeType = 'image/png';
+    if (imageBase64.includes('image/webp')) mimeType = 'image/webp';
+    if (imageBase64.includes('image/gif')) mimeType = 'image/gif';
+
+    // Clean base64 string if it has data URI prefix
+    const base64Data = imageBase64.includes(',')
+      ? imageBase64.split(',')[1]
+      : imageBase64;
+
+    let response = {};
+
+    if (command === 'generate_cards') {
+      const flashcards = await analyzeImageForFlashcards(base64Data, subject, mimeType);
+
+      if (deckId && flashcards.length > 0) {
+        const { flashcards: flashcardsCol } = getDatabase();
+        const now = new Date().toISOString();
+
+        const cardsToCreate = flashcards.map(card => ({
+          id: randomUUID(),
+          user_id: req.user.id,
+          deck_id: deckId,
+          question: card.question,
+          answer: card.answer,
+          subject: subject,
+          created_at: now,
+          updated_at: now,
+          sm2: { interval: 1, easeFactor: 2.5, repetitions: 0, nextReview: now },
+        }));
+
+        const inserted = await flashcardsCol.insert(cardsToCreate);
+        response = {
+          command: 'generate_cards',
+          status: 'success',
+          cardsGenerated: inserted.length,
+          cards: inserted,
+        };
+      } else {
+        response = {
+          command: 'generate_cards',
+          status: 'success',
+          cardsGenerated: flashcards.length,
+          cards: flashcards,
+        };
+      }
+    } else if (command === 'explain') {
+      const explanation = await explainImageContent(base64Data, mimeType);
+      response = {
+        command: 'explain',
+        status: 'success',
+        explanation,
+      };
+    } else if (command === 'extract_text') {
+      const text = await explainImageContent(
+        base64Data,
+        mimeType
+      );
+      response = {
+        command: 'extract_text',
+        status: 'success',
+        extractedText: text,
+      };
+    }
+
+    res.json(response);
+  } catch (err) {
+    console.error('Vision endpoint error:', err);
+    if (err.message.includes('GEMINI_RATE_LIMIT')) {
+      return res.status(429).json({ error: 'Muitas requisições. Tente novamente em alguns segundos.' });
+    }
+    if (err.message.includes('GEMINI_NOT_CONFIGURED')) {
+      return res.status(500).json({ error: 'IA não configurada' });
+    }
+    res.status(500).json({ error: 'Erro ao processar imagem' });
   }
 });
 

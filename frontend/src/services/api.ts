@@ -166,6 +166,8 @@ export const jarvisApi = {
   resetVoiceAdaptation: () => api.post('/jarvis/voice-feedback/reset'),
   doneReminder: (id: string) => api.put(`/jarvis/reminders/${id}/done`),
   deleteReminder: (id: string) => api.delete(`/jarvis/reminders/${id}`),
+  visionAnalyze: (imageBase64: string, command: 'generate_cards' | 'explain' | 'extract_text', subject?: string, deckId?: string | null) =>
+    api.post('/jarvis/vision', { imageBase64, command, subject: subject || 'Geral', deckId }),
 };
 
 // MindMap

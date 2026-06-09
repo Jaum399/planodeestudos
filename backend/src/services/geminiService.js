@@ -212,12 +212,125 @@ Inclua: semanas, tópicos em ordem, recursos recomendados, marcos de progresso, 
   }
 }
 
+async function callGeminiWithImage(imageBase64, prompt, mimeType = 'image/jpeg') {
+  if (!process.env.GOOGLE_GEMINI_API_KEY) {
+    throw new Error('GEMINI_NOT_CONFIGURED');
+  }
+
+  try {
+    const response = await axios.post(
+      `${GEMINI_API_URL}/${MODEL_ID}:generateContent`,
+      {
+        contents: [
+          {
+            parts: [
+              {
+                inlineData: {
+                  mimeType,
+                  data: imageBase64,
+                },
+              },
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          topP: 0.95,
+          topK: 40,
+        },
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+        ],
+      },
+      {
+        params: {
+          key: process.env.GOOGLE_GEMINI_API_KEY,
+        },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: TIMEOUT_MS,
+      }
+    );
+
+    if (!response.data.candidates || !response.data.candidates[0]?.content?.parts[0]?.text) {
+      throw new Error('GEMINI_EMPTY_RESPONSE');
+    }
+
+    return response.data.candidates[0].content.parts[0].text.trim();
+  } catch (error) {
+    if (error.response?.status === 429) {
+      throw new Error('GEMINI_RATE_LIMIT');
+    }
+    if (error.response?.status === 403) {
+      throw new Error('GEMINI_INVALID_API_KEY');
+    }
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('GEMINI_TIMEOUT');
+    }
+    console.error('Gemini Vision Error:', error.message);
+    throw error;
+  }
+}
+
+async function analyzeImageForFlashcards(imageBase64, subject = 'Geral', mimeType = 'image/jpeg') {
+  const prompt = `Analise esta imagem e gere flashcards de estudo de ALTA QUALIDADE.
+
+Retorne SOMENTE um array JSON válido:
+[
+  {"question": "pergunta concisa", "answer": "resposta completa e precisa"},
+  {"question": "pergunta 2", "answer": "resposta 2"},
+  {"question": "pergunta 3", "answer": "resposta 3"}
+]
+
+Mínimo 3, máximo 7 flashcards. Se a imagem for de equações, diagramas ou fórmulas, crie perguntas específicas sobre esses conceitos.`;
+
+  try {
+    const response = await callGeminiWithImage(imageBase64, prompt, mimeType);
+    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      throw new Error('INVALID_JSON_RESPONSE');
+    }
+    return JSON.parse(jsonMatch[0]);
+  } catch (error) {
+    console.error('Error analyzing image for flashcards:', error.message);
+    throw error;
+  }
+}
+
+async function explainImageContent(imageBase64, mimeType = 'image/jpeg') {
+  const prompt = `Explique o conteúdo desta imagem de forma educacional e clara.
+Identifique os conceitos principais, sua relevância educacional, e sugira como estudá-los.
+Mantenha a resposta entre 200-400 palavras.`;
+
+  try {
+    return await callGeminiWithImage(imageBase64, prompt, mimeType);
+  } catch (error) {
+    console.error('Error explaining image:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   isAvailable,
   callGemini,
+  callGeminiWithImage,
   generateFlashcardsWithAI,
   generateSummaryWithAI,
   generateJarvisResponse,
   generateQuizWithAI,
   generateStudyPlanWithAI,
+  analyzeImageForFlashcards,
+  explainImageContent,
 };
