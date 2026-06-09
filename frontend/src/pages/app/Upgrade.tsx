@@ -23,8 +23,8 @@ const PLANS: Plan[] = [
   {
     id: 'standard',
     name: 'Básico',
-    price: '29,00',
-    displayPrice: 29,
+    price: '50,00',
+    displayPrice: 50,
     description: 'Perfeito para começar',
     features: [
       'Planner Kanban',
@@ -37,8 +37,8 @@ const PLANS: Plan[] = [
   {
     id: 'premium',
     name: 'Premium',
-    price: '21,00',
-    displayPrice: 21,
+    price: '50,00',
+    displayPrice: 50,
     description: 'Mais econômico',
     featured: true,
     features: [
@@ -53,8 +53,8 @@ const PLANS: Plan[] = [
   {
     id: 'premium_medhub',
     name: 'Premium+',
-    price: '16,00',
-    displayPrice: 16,
+    price: '50,00',
+    displayPrice: 50,
     description: 'Completo com MedHub',
     features: [
       'Tudo do Premium, plus:',
