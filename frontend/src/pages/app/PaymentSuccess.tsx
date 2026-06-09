@@ -26,7 +26,9 @@ export default function PaymentSuccess() {
             updateUser(meRes.data.user);
           }
 
-          if (statusRes.data?.subscriptionStatus === 'active' && statusRes.data?.plan === 'premium') {
+          const plan = statusRes.data?.plan || '';
+          const isAnyPremiumPlan = plan !== 'free' && plan !== '' && statusRes.data?.subscriptionStatus === 'active';
+          if (isAnyPremiumPlan) {
             setStatus('success');
             return;
           }

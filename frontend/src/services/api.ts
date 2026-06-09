@@ -150,7 +150,7 @@ export const analyticsApi = {
 // Payment
 export const paymentApi = {
   getStatus: () => api.get('/payment/status'),
-  createCheckout: (planType: 'standard' = 'standard') => api.post('/payment/create-checkout', { planType }),
+  createCheckout: (planType: string = 'standard') => api.post('/payment/create-checkout', { planType }),
   getPortal: () => api.get('/payment/portal'),
 };
 
