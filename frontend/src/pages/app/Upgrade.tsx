@@ -37,8 +37,8 @@ const PLANS: Plan[] = [
   {
     id: 'premium',
     name: 'Premium',
-    price: '49,90',
-    displayPrice: 49.9,
+    price: '75,00',
+    displayPrice: 75,
     description: 'Mais econômico',
     featured: true,
     features: [
@@ -53,8 +53,8 @@ const PLANS: Plan[] = [
   {
     id: 'premium_medhub',
     name: 'Premium+',
-    price: '89,90',
-    displayPrice: 89.9,
+    price: '120,00',
+    displayPrice: 120,
     description: 'Completo com MedHub',
     features: [
       'Tudo do Premium, plus:',
