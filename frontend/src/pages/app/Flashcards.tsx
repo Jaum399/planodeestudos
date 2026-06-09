@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, Clock3, Plus, Target, TrendingUp, X, Sparkles } from 'lucide-react';
+import { BookOpen, Clock3, Plus, Target, TrendingUp, X, Sparkles, Upload } from 'lucide-react';
 import { flashcardDecksApi, flashcardsApi, goalsApi, studyToolsApi } from '../../services/api';
 import GoalTracker from '../../components/GoalTracker';
+import BatchFlashcardModal from '../../components/BatchFlashcardModal';
 import type {
   Flashcard,
   FlashcardDeck,
@@ -62,6 +63,8 @@ export default function Flashcards() {
   const [showCreateDeck, setShowCreateDeck] = useState(false);
   const [deckLoading, setDeckLoading] = useState(false);
   const [deckForm, setDeckForm] = useState({ name: '', color: '#7c3aed', description: '' });
+
+  const [showBatchCreation, setShowBatchCreation] = useState(false);
 
   const [showAIGeneration, setShowAIGeneration] = useState(false);
   const [aiForm, setAiForm] = useState({
@@ -253,6 +256,15 @@ export default function Flashcards() {
     }
   };
 
+  const handleBatchCreate = async (cards: any[]) => {
+    try {
+      await flashcardsApi.batchCreate(cards);
+      await loadDecksAndProgress();
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Erro ao criar flashcards');
+    }
+  };
+
   const openDeckFromProgress = (deckId: string) => {
     const exists = deckTiles.some((deck) => deck.id === deckId);
     if (!exists) return;
@@ -357,13 +369,20 @@ export default function Flashcards() {
               <h2 className="text-xl font-bold text-white">Meus Decks</h2>
               <p className="text-gray-400 text-sm">Escolha um deck para abrir seus flashcards</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 className="btn-primary py-2 px-3 inline-flex items-center gap-2 text-sm"
                 onClick={() => setShowAIGeneration(true)}
               >
                 <Sparkles size={14} />
                 Gerar com IA
+              </button>
+              <button
+                className="btn-primary py-2 px-3 inline-flex items-center gap-2 text-sm"
+                onClick={() => setShowBatchCreation(true)}
+              >
+                <Upload size={14} />
+                Importar Lote
               </button>
               <button
                 className="btn-primary py-2 px-3 inline-flex items-center gap-2"
@@ -575,6 +594,14 @@ export default function Flashcards() {
             </div>
           </div>
         )}
+
+        <BatchFlashcardModal
+          isOpen={showBatchCreation}
+          onClose={() => setShowBatchCreation(false)}
+          onSave={handleBatchCreate}
+          deckId={selectedDeckId}
+          subjects={[...new Set(deckTiles.map(d => d.id).filter(id => id !== 'none'))]}
+        />
       </div>
     );
   }

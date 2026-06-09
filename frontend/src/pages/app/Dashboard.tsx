@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart2, Layers, BookOpen, Calendar, Flame, Target, CheckCircle, Clock, Zap, Lock, Timer, Play, FolderOpen, FileText, GraduationCap, BrainCircuit, Users, TrendingUp, TrendingDown, AlertCircle, ChevronRight } from 'lucide-react';
+import { BarChart2, Layers, BookOpen, Calendar, Flame, Target, CheckCircle, Clock, Zap, Lock, Timer, Play, FolderOpen, FileText, GraduationCap, BrainCircuit, Users, TrendingUp, TrendingDown, AlertCircle, ChevronRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { analyticsApi, flashcardsApi } from '../../services/api';
@@ -14,6 +14,16 @@ const EMPTY_FLASHCARDS_SUMMARY: FlashcardsProgressSummary = {
   wrong_total: 0,
   due_today_total: 0,
 };
+
+// Skeleton loader for deck cards
+function DeckSkeleton() {
+  return (
+    <div className="rounded-xl px-3 py-2 bg-white/5 animate-pulse">
+      <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
+      <div className="h-3 bg-white/5 rounded w-1/2" />
+    </div>
+  );
+}
 
 function formatLastReviewed(value?: string) {
   if (!value) return 'Sem revisão ainda';
@@ -31,20 +41,61 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { language, t } = usePreferences();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+
+  // Recent Decks pagination
   const [recentDecks, setRecentDecks] = useState<FlashcardDeckProgress[]>([]);
+  const [recentPage, setRecentPage] = useState(1);
+  const [recentHasMore, setRecentHasMore] = useState(true);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(false);
+
+  // Due Today pagination
   const [dueTodayDecks, setDueTodayDecks] = useState<FlashcardDeckProgress[]>([]);
+  const [dueTodayPage, setDueTodayPage] = useState(1);
+  const [dueTodayHasMore, setDueTodayHasMore] = useState(true);
+  const [isLoadingDueToday, setIsLoadingDueToday] = useState(false);
+
   const [flashcardsSummary, setFlashcardsSummary] = useState<FlashcardsProgressSummary>(EMPTY_FLASHCARDS_SUMMARY);
   const [isLoading, setIsLoading] = useState(true);
+
+  const recentScrollRef = useRef<HTMLDivElement>(null);
+  const dueTodayScrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch progress data with pagination
+  const fetchProgressPage = useCallback(async (pageRecent: number, pageDueToday: number) => {
+    try {
+      const res = await flashcardsApi.getProgress({
+        recentPage: pageRecent,
+        recentLimit: 6,
+        dueTodayPage: pageDueToday,
+        dueTodayLimit: 6,
+      } as any);
+
+      if (pageRecent === 1) {
+        setRecentDecks(res.data?.recentDecks || []);
+      } else {
+        setRecentDecks(prev => [...prev, ...(res.data?.recentDecks || [])]);
+      }
+
+      if (pageDueToday === 1) {
+        setDueTodayDecks(res.data?.dueTodayDecks || []);
+      } else {
+        setDueTodayDecks(prev => [...prev, ...(res.data?.dueTodayDecks || [])]);
+      }
+
+      setRecentHasMore(res.data?.recentPagination?.hasMore || false);
+      setDueTodayHasMore(res.data?.dueTodayPagination?.hasMore || false);
+      setFlashcardsSummary(res.data?.summary || EMPTY_FLASHCARDS_SUMMARY);
+    } catch (error) {
+      console.error('Error fetching progress:', error);
+    }
+  }, []);
 
   useEffect(() => {
     Promise.all([
       analyticsApi.getSummary(),
-      flashcardsApi.getProgress(),
-    ]).then(([analyticsRes, progressRes]) => {
+      fetchProgressPage(1, 1),
+    ]).then(([analyticsRes]) => {
       setAnalytics(analyticsRes.data);
-      setRecentDecks(Array.isArray(progressRes.data?.recentDecks) ? progressRes.data.recentDecks : []);
-      setDueTodayDecks(Array.isArray(progressRes.data?.dueTodayDecks) ? progressRes.data.dueTodayDecks : []);
-      setFlashcardsSummary(progressRes.data?.summary || EMPTY_FLASHCARDS_SUMMARY);
     }).catch(() => {
       setFlashcardsSummary(EMPTY_FLASHCARDS_SUMMARY);
       setRecentDecks([]);
@@ -52,7 +103,49 @@ export default function Dashboard() {
     }).finally(() => {
       setIsLoading(false);
     });
-  }, []);
+  }, [fetchProgressPage]);
+
+  const loadMoreRecent = useCallback(async () => {
+    if (isLoadingRecent || !recentHasMore) return;
+    setIsLoadingRecent(true);
+    const nextPage = recentPage + 1;
+    try {
+      const res = await flashcardsApi.getProgress({
+        recentPage: nextPage,
+        recentLimit: 6,
+        dueTodayPage: 1,
+        dueTodayLimit: 6,
+      } as any);
+      setRecentDecks(prev => [...prev, ...(res.data?.recentDecks || [])]);
+      setRecentHasMore(res.data?.recentPagination?.hasMore || false);
+      setRecentPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more recent decks:', error);
+    } finally {
+      setIsLoadingRecent(false);
+    }
+  }, [recentPage, recentHasMore, isLoadingRecent]);
+
+  const loadMoreDueToday = useCallback(async () => {
+    if (isLoadingDueToday || !dueTodayHasMore) return;
+    setIsLoadingDueToday(true);
+    const nextPage = dueTodayPage + 1;
+    try {
+      const res = await flashcardsApi.getProgress({
+        recentPage: 1,
+        recentLimit: 6,
+        dueTodayPage: nextPage,
+        dueTodayLimit: 6,
+      } as any);
+      setDueTodayDecks(prev => [...prev, ...(res.data?.dueTodayDecks || [])]);
+      setDueTodayHasMore(res.data?.dueTodayPagination?.hasMore || false);
+      setDueTodayPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more due today decks:', error);
+    } finally {
+      setIsLoadingDueToday(false);
+    }
+  }, [dueTodayPage, dueTodayHasMore, isLoadingDueToday]);
 
   const weeklyHours = analytics ? Math.round(analytics.weeklyMinutes / 60) : 0;
   const weeklyGoal = user?.weekly_goal_hours || 20;
@@ -286,46 +379,73 @@ export default function Dashboard() {
           Fluxo de Flashcards
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Recent Decks */}
           <div className="card-glass rounded-2xl p-5">
             <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">Continuar de onde parou</p>
-            {recentDecks.length > 0 ? (
-              <div className="space-y-2">
-                {recentDecks.slice(0, 3).map((deck) => (
-                  <Link
-                    key={deck.id}
-                    to={`/app/flashcards?deck=${encodeURIComponent(deck.deck_id)}`}
-                    className="block rounded-xl px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors"
-                  >
-                    <p className="text-white text-sm font-medium truncate">{deck.deck_name}</p>
-                    <p className="text-gray-500 text-xs">{formatLastReviewed(deck.last_reviewed_at)}</p>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">Nenhum deck revisado ainda.</p>
-            )}
+            <div className="space-y-2" ref={recentScrollRef}>
+              {recentDecks.length > 0 ? (
+                <>
+                  {recentDecks.map((deck) => (
+                    <Link
+                      key={deck.id}
+                      to={`/app/flashcards?deck=${encodeURIComponent(deck.deck_id)}`}
+                      className="block rounded-xl px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <p className="text-white text-sm font-medium truncate">{deck.deck_name}</p>
+                      <p className="text-gray-500 text-xs">{formatLastReviewed(deck.last_reviewed_at)}</p>
+                    </Link>
+                  ))}
+                  {isLoadingRecent && <DeckSkeleton />}
+                  {recentHasMore && (
+                    <button
+                      onClick={loadMoreRecent}
+                      disabled={isLoadingRecent}
+                      className="w-full text-xs text-primary-400 hover:text-primary-300 disabled:opacity-50 py-2 flex items-center justify-center gap-1"
+                    >
+                      <ChevronDown size={14} /> {isLoadingRecent ? 'Carregando...' : 'Ver mais'}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-500 text-sm">Nenhum deck revisado ainda.</p>
+              )}
+            </div>
           </div>
 
+          {/* Due Today Decks */}
           <div className="card-glass rounded-2xl p-5">
             <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">Revisar hoje</p>
-            {dueTodayDecks.length > 0 ? (
-              <div className="space-y-2">
-                {dueTodayDecks.slice(0, 3).map((deck) => (
-                  <Link
-                    key={deck.id}
-                    to={`/app/flashcards?deck=${encodeURIComponent(deck.deck_id)}`}
-                    className="block rounded-xl px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors"
-                  >
-                    <p className="text-white text-sm font-medium truncate">{deck.deck_name}</p>
-                    <p className="text-amber-300 text-xs">{deck.due_today} card(s) pendentes</p>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">Sem revisões pendentes hoje.</p>
-            )}
+            <div className="space-y-2" ref={dueTodayScrollRef}>
+              {dueTodayDecks.length > 0 ? (
+                <>
+                  {dueTodayDecks.map((deck) => (
+                    <Link
+                      key={deck.id}
+                      to={`/app/flashcards?deck=${encodeURIComponent(deck.deck_id)}`}
+                      className="block rounded-xl px-3 py-2 bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <p className="text-white text-sm font-medium truncate">{deck.deck_name}</p>
+                      <p className="text-amber-300 text-xs">{deck.due_today} card(s) pendentes</p>
+                    </Link>
+                  ))}
+                  {isLoadingDueToday && <DeckSkeleton />}
+                  {dueTodayHasMore && (
+                    <button
+                      onClick={loadMoreDueToday}
+                      disabled={isLoadingDueToday}
+                      className="w-full text-xs text-primary-400 hover:text-primary-300 disabled:opacity-50 py-2 flex items-center justify-center gap-1"
+                    >
+                      <ChevronDown size={14} /> {isLoadingDueToday ? 'Carregando...' : 'Ver mais'}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-500 text-sm">Sem revisões pendentes hoje.</p>
+              )}
+            </div>
           </div>
 
+          {/* Summary */}
           <div className="card-glass rounded-2xl p-5">
             <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">Resumo do dia</p>
             <div className="space-y-2 text-sm">

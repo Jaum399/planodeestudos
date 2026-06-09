@@ -109,9 +109,12 @@ export const plannerApi = {
 export const flashcardsApi = {
   getAll: (deckId?: string | null) => api.get('/flashcards', { params: deckId ? { deck_id: deckId } : {} }),
   getReview: (deckId?: string | null) => api.get('/flashcards/review', { params: deckId ? { deck_id: deckId } : {} }),
-  getProgress: () => api.get('/flashcards/progress'),
+  getProgress: (params?: { recentPage?: number; recentLimit?: number; dueTodayPage?: number; dueTodayLimit?: number }) =>
+    api.get('/flashcards/progress', { params: params || {} }),
   create: (data: { subject: string; question: string; answer: string; deck_id?: string | null }) =>
     api.post('/flashcards', data),
+  batchCreate: (cards: Array<{ subject: string; question: string; answer: string; deck_id?: string | null }>) =>
+    api.post('/flashcards/batch', { cards }),
   review: (id: string, difficulty: number) =>
     api.put(`/flashcards/${id}/review`, { difficulty }),
   update: (id: string, data: { subject?: string; question?: string; answer?: string; deck_id?: string | null }) =>

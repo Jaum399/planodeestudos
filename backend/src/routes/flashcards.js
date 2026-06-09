@@ -110,11 +110,18 @@ router.get('/review', async (req, res) => {
 
 // GET /api/flashcards/progress
 // Retorna progresso por deck + listas úteis para UX (recentes e para revisar hoje)
+// Query params: ?recentPage=1&recentLimit=6&dueToday_page=1&dueTodayLimit=6
 router.get('/progress', async (req, res) => {
   try {
     const { flashcards, flashcardDecks, flashcardProgress } = getDatabase();
     const userId = req.user.id;
     const today = new Date().toISOString().split('T')[0];
+
+    // Pagination params
+    const recentLimit = Math.min(Number(req.query.recentLimit) || 6, 50);
+    const recentPage = Math.max(Number(req.query.recentPage) || 1, 1);
+    const dueTodayLimit = Math.min(Number(req.query.dueTodayLimit) || 6, 50);
+    const dueTodayPage = Math.max(Number(req.query.dueTodayPage) || 1, 1);
 
     const [decks, progressDocs, allCards] = await Promise.all([
       flashcardDecks.find({ user_id: userId }).sort({ created_at: -1 }),
@@ -157,14 +164,20 @@ router.get('/progress', async (req, res) => {
       };
     });
 
-    const recentDecks = [...progress]
-      .sort((a, b) => String(b.last_reviewed_at || '').localeCompare(String(a.last_reviewed_at || '')))
-      .slice(0, 6);
+    // Recent decks with pagination
+    const allRecentDecks = [...progress]
+      .sort((a, b) => String(b.last_reviewed_at || '').localeCompare(String(a.last_reviewed_at || '')));
+    const recentStart = (recentPage - 1) * recentLimit;
+    const recentDecks = allRecentDecks.slice(recentStart, recentStart + recentLimit);
+    const recentTotal = allRecentDecks.length;
 
-    const dueTodayDecks = [...progress]
+    // Due today decks with pagination
+    const allDueTodayDecks = [...progress]
       .filter((p) => Number(p.due_today || 0) > 0)
-      .sort((a, b) => Number(b.due_today || 0) - Number(a.due_today || 0))
-      .slice(0, 6);
+      .sort((a, b) => Number(b.due_today || 0) - Number(a.due_today || 0));
+    const dueTodayStart = (dueTodayPage - 1) * dueTodayLimit;
+    const dueTodayDecks = allDueTodayDecks.slice(dueTodayStart, dueTodayStart + dueTodayLimit);
+    const dueTodayTotal = allDueTodayDecks.length;
 
     const summary = {
       tracked_decks: progress.length,
@@ -174,7 +187,25 @@ router.get('/progress', async (req, res) => {
       due_today_total: progress.reduce((acc, p) => acc + Number(p.due_today || 0), 0),
     };
 
-    res.json({ progress, recentDecks, dueTodayDecks, summary, today });
+    res.json({
+      progress,
+      recentDecks,
+      recentPagination: {
+        page: recentPage,
+        limit: recentLimit,
+        total: recentTotal,
+        hasMore: recentStart + recentLimit < recentTotal,
+      },
+      dueTodayDecks,
+      dueTodayPagination: {
+        page: dueTodayPage,
+        limit: dueTodayLimit,
+        total: dueTodayTotal,
+        hasMore: dueTodayStart + dueTodayLimit < dueTodayTotal,
+      },
+      summary,
+      today,
+    });
   } catch (err) {
     console.error('Get flashcards progress error:', err);
     res.status(500).json({ error: 'Erro ao carregar progresso dos flashcards' });
@@ -215,6 +246,67 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('Create flashcard error:', err);
     res.status(500).json({ error: 'Erro ao criar flashcard' });
+  }
+});
+
+// POST /api/flashcards/batch - Bulk create flashcards
+router.post('/batch', async (req, res) => {
+  try {
+    const { cards } = req.body;
+
+    if (!Array.isArray(cards) || cards.length === 0) {
+      return res.status(400).json({ error: 'Deve conter array de flashcards' });
+    }
+
+    if (cards.length > 100) {
+      return res.status(400).json({ error: 'Máximo 100 flashcards por vez' });
+    }
+
+    const { flashcards } = getDatabase();
+    const now = new Date().toISOString();
+    const today = now.split('T')[0];
+    const created = [];
+    const errors: string[] = [];
+
+    for (let i = 0; i < cards.length; i++) {
+      try {
+        const { subject, question, answer, deck_id } = cards[i];
+
+        if (!subject || !question || !answer) {
+          errors.push(`Card ${i + 1}: Matéria, pergunta e resposta são obrigatórias`);
+          continue;
+        }
+
+        const card = new flashcards({
+          _id: randomUUID(),
+          user_id: req.user.id,
+          deck_id: deck_id || null,
+          subject: subject.trim(),
+          question: question.trim(),
+          answer: answer.trim(),
+          difficulty: 0,
+          next_review: today,
+          review_count: 0,
+          ease_factor: 2.5,
+          interval_days: 1,
+          created_at: now,
+          updated_at: now,
+        });
+        await card.save();
+        created.push(toCard(card));
+      } catch (error) {
+        errors.push(`Card ${i + 1}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      }
+    }
+
+    res.status(201).json({
+      created: created.length,
+      cards: created,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (err) {
+    console.error('Batch create flashcards error:', err);
+    res.status(500).json({ error: 'Erro ao criar flashcards em lote' });
   }
 });
 
