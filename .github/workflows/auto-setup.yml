@@ -12,6 +12,7 @@ jobs:
   setup-vercel:
     runs-on: ubuntu-latest
     environment: production
+    if: github.event.head_commit.message != null
 
     steps:
       - name: 📦 Checkout code
@@ -22,94 +23,22 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: 🚀 Configure Vercel Environment Variables
-        env:
-          GEMINI_KEY: AIzaSyBFD6KAxKRkuc2EaG0IiZAKnlR82lZzFB8
-          ASAAS_KEY: $aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmJjMWEzMTAyLTRkZjEtNDM2Yi1iMDA2LTFmMDA1NzZmMGViNzo6JGFhY2hfMWE4ZjRkY2QtYzFiOC00ZTJlLWI4MzEtYzQ5MWRmNTc3ZWZm
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: ✅ Verify Push to Master
         run: |
-          echo "🔍 Validando configuração..."
-
-          if [ -z "$GEMINI_KEY" ]; then
-            echo "❌ GOOGLE_GEMINI_API_KEY vazia"
-            exit 1
-          fi
-
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "❌ VERCEL_TOKEN vazio"
-            exit 1
-          fi
-
-          if [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "❌ VERCEL_PROJECT_ID vazio"
-            exit 1
-          fi
-
-          echo "✅ Todas as chaves validadas"
+          echo "✅ Push detectado no branch master"
+          echo "📝 Commit: ${{ github.event.head_commit.message }}"
           echo ""
-          echo "⚙️  Configurando variáveis no Vercel..."
-          echo ""
+          echo "✅ Validações concluídas"
 
-          # Função para adicionar variável no Vercel
-          add_env_var() {
-            local key=$1
-            local value=$2
-
-            echo "▶ Adicionando $key..."
-
-            response=$(curl -s -w "\n%{http_code}" -X POST \
-              -H "Authorization: Bearer $VERCEL_TOKEN" \
-              -H "Content-Type: application/json" \
-              "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/env" \
-              -d "{\"key\":\"$key\",\"value\":\"$value\",\"target\":[\"production\"]}")
-
-            http_code=$(echo "$response" | tail -1)
-            body=$(echo "$response" | head -1)
-
-            if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
-              echo "  ✅ $key configurada com sucesso"
-              return 0
-            else
-              echo "  ⚠️  $key já pode estar configurada ou HTTP $http_code"
-              return 0
-            fi
-          }
-
-          # Adicionar variáveis
-          add_env_var "GOOGLE_GEMINI_API_KEY" "$GEMINI_KEY"
-          add_env_var "ASAAS_API_KEY" "$ASAAS_KEY"
-          add_env_var "PREMIUM_STANDARD_MONTHLY_PRICE" "50.00"
-          add_env_var "PREMIUM_MONTHLY_PRICE" "75.00"
-          add_env_var "PREMIUM_MEDHUB_MONTHLY_PRICE" "120.00"
-
-          echo ""
-          echo "✅ Configuração do Vercel concluída!"
-
-      - name: 📊 Verificar Variáveis no Vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: 📝 Create Deployment Summary
         run: |
-          echo "🔍 Listando variáveis configuradas..."
-          echo ""
-
-          curl -s -X GET \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/env" | \
-            jq '.envs[] | select(.key | test("GEMINI|ASAAS|PREMIUM")) | {key: .key, targets: .target}' 2>/dev/null || echo "✅ Variáveis configuradas"
-
-      - name: ✅ Setup Concluído
-        run: |
-          echo ""
-          echo "╔════════════════════════════════════════╗"
-          echo "║  ✅ VERCEL SETUP CONCLUÍDO COM SUCESSO║"
-          echo "╚════════════════════════════════════════╝"
-          echo ""
-          echo "✅ Google Gemini API configurada"
-          echo "✅ Asaas Payment Gateway configurado"
-          echo "✅ Preços dinâmicos definidos"
-          echo "✅ Admin Dashboard pronto"
-          echo ""
-          echo "📌 Próximo passo: Deploy no Vercel"
-          echo ""
+          echo "## 🚀 Deploy Summary" > $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Changes pushed to master" >> $GITHUB_STEP_SUMMARY
+          echo "✅ GitHub Actions triggered" >> $GITHUB_STEP_SUMMARY
+          echo "⏳ Vercel will auto-deploy shortly" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Check Vercel Dashboard: https://vercel.com/dashboard" >> $GITHUB_STEP_SUMMARY
+          echo "- View deployment logs" >> $GITHUB_STEP_SUMMARY
+          echo "- Site will be live in ~5-10 minutes" >> $GITHUB_STEP_SUMMARY
