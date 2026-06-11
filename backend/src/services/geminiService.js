@@ -322,6 +322,103 @@ Mantenha a resposta entre 200-400 palavras.`;
   }
 }
 
+async function generateMockExamWithAI({ topic, subject, difficulty = 'medium', questionCount = 10 }) {
+  const difficultyDesc = {
+    easy: 'fácil (conceitual, definições)',
+    medium: 'média (aplicação prática, interpretação)',
+    hard: 'difícil (análise crítica, síntese, casos complexos)',
+  };
+
+  const systemInstruction = `Você é especialista em criar provas e exames de ALTA QUALIDADE para estudantes de medicina.
+Cada questão deve ter uma única resposta correta clara, alternativas plausíveis, e explicação detalhada.
+As questões devem seguir o padrão ENEM/concursos médicos.`;
+
+  const prompt = `Gere ${questionCount} questões de múltipla escolha nível ${difficultyDesc[difficulty] || difficultyDesc.medium} sobre "${topic}" em ${subject}.
+
+Formato OBRIGATÓRIO - Retorne SOMENTE JSON (sem markdown, sem \`\`\`, sem texto adicional):
+{
+  "title": "Simulado: ${topic}",
+  "subject": "${subject}",
+  "difficulty": "${difficulty}",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "Texto da questão 1 aqui",
+      "options": [
+        {"letter": "A", "text": "opção A"},
+        {"letter": "B", "text": "opção B"},
+        {"letter": "C", "text": "opção C"},
+        {"letter": "D", "text": "opção D"},
+        {"letter": "E", "text": "opção E"}
+      ],
+      "correctAnswer": "A",
+      "explanation": "Explicação clara e concisa"
+    }
+  ]
+}`;
+
+  try {
+    const response = await callGemini(prompt, systemInstruction);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('INVALID_JSON_RESPONSE');
+    }
+    return JSON.parse(jsonMatch[0]);
+  } catch (error) {
+    console.error('Error generating mock exam:', error.message);
+    throw error;
+  }
+}
+
+async function generateMnemonicsWithAI({ term, context = '', subject = 'Geral' }) {
+  const systemInstruction = `Você é especialista em criar técnicas de memorização, mnemônicos e associações criativas.
+Mnemônicos devem ser memoráveis, criativas e cientificamente baseadas em técnicas de aprendizado.`;
+
+  const prompt = `Crie 3-5 mnemônicos e técnicas de memorização DIFERENTES e CRIATIVAS para lembrar de "${term}" em ${subject}.
+${context ? `Contexto: ${context}` : ''}
+
+Para cada técnica, inclua:
+- Nome/Tipo: (ex: ACRÔNIMO, HISTÓRIA, IMAGEM MENTAL, etc)
+- Descrição: explicação da técnica
+- Exemplo: como aplicar
+- Eficácia: por que funciona
+
+Mantenha a resposta prática e fácil de aplicar durante o estudo.`;
+
+  try {
+    return await callGemini(prompt, systemInstruction);
+  } catch (error) {
+    console.error('Error generating mnemonics:', error.message);
+    throw error;
+  }
+}
+
+async function analyzeStudyWeaknesses({ userId, recentPerformance = [] }) {
+  const systemInstruction = `Você é especialista em análise de desempenho educacional e recomendações personalizadas.
+Identifique padrões, fraquezas e oportunidades de melhoria.`;
+
+  const performanceData = recentPerformance.length > 0
+    ? `Desempenho recente: ${JSON.stringify(recentPerformance)}`
+    : 'Sem dados de desempenho disponível. Forneça dicas gerais.';
+
+  const prompt = `Analise o desempenho do usuário e forneça:
+1. Tópicos principais com dificuldade
+2. Padrões de erro identificados
+3. 3-5 recomendações específicas para melhorar
+4. Sequência sugerida de estudo
+
+${performanceData}
+
+Seja específico, motivador e prático nas recomendações.`;
+
+  try {
+    return await callGemini(prompt, systemInstruction);
+  } catch (error) {
+    console.error('Error analyzing weaknesses:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   isAvailable,
   callGemini,
@@ -333,4 +430,7 @@ module.exports = {
   generateStudyPlanWithAI,
   analyzeImageForFlashcards,
   explainImageContent,
+  generateMockExamWithAI,
+  generateMnemonicsWithAI,
+  analyzeStudyWeaknesses,
 };

@@ -168,6 +168,10 @@ export const jarvisApi = {
   deleteReminder: (id: string) => api.delete(`/jarvis/reminders/${id}`),
   visionAnalyze: (imageBase64: string, command: 'generate_cards' | 'explain' | 'extract_text', subject?: string, deckId?: string | null) =>
     api.post('/jarvis/vision', { imageBase64, command, subject: subject || 'Geral', deckId }),
+  generateContent: (type: 'study_plan' | 'mock_exam' | 'summary' | 'mnemonics', topic: string, subject?: string, difficulty?: string, durationDays?: number) =>
+    api.post('/jarvis/generate-content', { type, topic, subject: subject || 'Geral', difficulty: difficulty || 'medium', durationDays: durationDays || 7 }),
+  analyzePerformance: (recentAttempts?: any[], weakAreas?: string[]) =>
+    api.post('/jarvis/analyze-performance', { recentAttempts: recentAttempts || [], weakAreas: weakAreas || [] }),
 };
 
 // MindMap

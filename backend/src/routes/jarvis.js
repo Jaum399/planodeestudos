@@ -5,7 +5,7 @@ const { authenticate, requireAccess } = require('../middleware/auth');
 const { enqueueReminderNotifications, processDueNotificationJobs } = require('../services/reminderNotifications');
 const { createFlashcardsForTheme } = require('../services/flashcardGeneration');
 const aiProvider = require('../services/aiProvider');
-const { analyzeImageForFlashcards, explainImageContent } = require('../services/geminiService');
+const { analyzeImageForFlashcards, explainImageContent, generateMockExamWithAI, generateMnemonicsWithAI, analyzeStudyWeaknesses } = require('../services/geminiService');
 
 const router = express.Router();
 router.use(authenticate, requireAccess);
@@ -1084,95 +1084,104 @@ router.delete('/reminders/:id', async (req, res) => {
   }
 });
 
-// ── POST /api/jarvis/vision ──────────────────────────────────────────────────────
-router.post('/vision', async (req, res) => {
+// ── POST /api/jarvis/generate-content ───────────────────────────────────────────
+router.post('/generate-content', async (req, res) => {
   try {
-    const { imageBase64, command, subject = 'Geral', deckId } = req.body;
+    const { type, topic, subject = 'Geral', difficulty = 'medium', durationDays = 7 } = req.body;
 
-    if (!imageBase64) {
-      return res.status(400).json({ error: 'Imagem não fornecida' });
+    if (!type || !['study_plan', 'mock_exam', 'summary', 'mnemonics'].includes(type)) {
+      return res.status(400).json({ error: 'Tipo de conteúdo inválido' });
     }
 
-    if (!command || !['generate_cards', 'explain', 'extract_text'].includes(command)) {
-      return res.status(400).json({ error: 'Comando inválido' });
+    if (!topic) {
+      return res.status(400).json({ error: 'Tópico é obrigatório' });
     }
 
-    // Detect mime type from base64 header (usually has format like data:image/jpeg;base64,...)
-    let mimeType = 'image/jpeg';
-    if (imageBase64.includes('image/png')) mimeType = 'image/png';
-    if (imageBase64.includes('image/webp')) mimeType = 'image/webp';
-    if (imageBase64.includes('image/gif')) mimeType = 'image/gif';
+    let generatedContent = {};
 
-    // Clean base64 string if it has data URI prefix
-    const base64Data = imageBase64.includes(',')
-      ? imageBase64.split(',')[1]
-      : imageBase64;
-
-    let response = {};
-
-    if (command === 'generate_cards') {
-      const flashcards = await analyzeImageForFlashcards(base64Data, subject, mimeType);
-
-      if (deckId && flashcards.length > 0) {
-        const { flashcards: flashcardsCol } = getDatabase();
-        const now = new Date().toISOString();
-
-        const cardsToCreate = flashcards.map(card => ({
-          id: randomUUID(),
-          user_id: req.user.id,
-          deck_id: deckId,
-          question: card.question,
-          answer: card.answer,
-          subject: subject,
-          created_at: now,
-          updated_at: now,
-          sm2: { interval: 1, easeFactor: 2.5, repetitions: 0, nextReview: now },
-        }));
-
-        const inserted = await flashcardsCol.insert(cardsToCreate);
-        response = {
-          command: 'generate_cards',
-          status: 'success',
-          cardsGenerated: inserted.length,
-          cards: inserted,
-        };
-      } else {
-        response = {
-          command: 'generate_cards',
-          status: 'success',
-          cardsGenerated: flashcards.length,
-          cards: flashcards,
-        };
-      }
-    } else if (command === 'explain') {
-      const explanation = await explainImageContent(base64Data, mimeType);
-      response = {
-        command: 'explain',
-        status: 'success',
-        explanation,
-      };
-    } else if (command === 'extract_text') {
-      const text = await explainImageContent(
-        base64Data,
-        mimeType
-      );
-      response = {
-        command: 'extract_text',
-        status: 'success',
-        extractedText: text,
-      };
+    if (type === 'study_plan') {
+      generatedContent = await aiProvider.generateStudyPlanWithAI({
+        goal: topic,
+        currentLevel: 'intermediário',
+        timeAvailable: `${durationDays} dias`,
+        subject,
+      });
+    } else if (type === 'mock_exam') {
+      generatedContent = await generateMockExamWithAI({
+        topic,
+        subject,
+        difficulty,
+        questionCount: 10,
+      });
+    } else if (type === 'summary') {
+      generatedContent = await aiProvider.generateSummaryWithAI({
+        content: topic,
+        length: difficulty === 'hard' ? 'long' : difficulty === 'easy' ? 'short' : 'medium',
+      });
+    } else if (type === 'mnemonics') {
+      generatedContent = await generateMnemonicsWithAI({
+        term: topic,
+        subject,
+        context: '',
+      });
     }
 
-    res.json(response);
+    res.json({
+      type,
+      topic,
+      subject,
+      content: generatedContent,
+      generatedAt: new Date().toISOString(),
+    });
   } catch (err) {
-    console.error('Vision endpoint error:', err);
+    console.error('Content generation error:', err);
     if (err.message.includes('GEMINI_RATE_LIMIT')) {
       return res.status(429).json({ error: 'Muitas requisições. Tente novamente em alguns segundos.' });
     }
-    if (err.message.includes('GEMINI_NOT_CONFIGURED')) {
-      return res.status(500).json({ error: 'IA não configurada' });
-    }
-    res.status(500).json({ error: 'Erro ao processar imagem' });
+    res.status(500).json({ error: 'Erro ao gerar conteúdo' });
+  }
+});
+
+// ── POST /api/jarvis/analyze-performance ────────────────────────────────────────
+router.post('/analyze-performance', async (req, res) => {
+  try {
+    const { recentAttempts = [], weakAreas = [] } = req.body;
+
+    const performanceData = recentAttempts.slice(0, 5).map(attempt => ({
+      topic: attempt.topic,
+      correctCount: attempt.correct || 0,
+      totalCount: attempt.total || 1,
+      accuracy: attempt.accuracy || 0,
+      timestamp: attempt.timestamp,
+    }));
+
+    const analysis = await analyzeStudyWeaknesses({
+      userId: req.user.id,
+      recentPerformance: performanceData,
+    });
+
+    const { jarvis } = getDatabase();
+    const now = new Date().toISOString();
+
+    await jarvis.findOneAndUpdate(
+      { _id: req.user.id },
+      {
+        $set: {
+          updated_at: now,
+          'weak_areas': weakAreas || [],
+        },
+      },
+      { upsert: true }
+    );
+
+    res.json({
+      analysis,
+      recommendations: analysis,
+      analyzedAt: now,
+    });
+  } catch (err) {
+    console.error('Performance analysis error:', err);
+    res.status(500).json({ error: 'Erro ao analisar desempenho' });
   }
 });
 
