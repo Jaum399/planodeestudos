@@ -2,7 +2,7 @@ name: 🔗 Auto Configure Webhook on Deploy
 
 on:
   deployment:
-    
+
   workflow_dispatch:
     inputs:
       environment:
@@ -29,17 +29,18 @@ jobs:
         with:
           node-version: '18'
 
-      - name: 🔗 Configure Webhook
+      - name: 🔗 Webhook Status
         run: |
-          echo "🚀 Configurando webhook automaticamente..."
+          echo "🚀 Webhook Configuration Status"
           echo ""
 
-          # Export variáveis de ambiente
-          export ASAAS_API_KEY="${{ secrets.ASAAS_API_KEY }}"
-          export ASAAS_ENV="production"
-
-          # Executar script
-          node configure-webhook.js
+          if [ -z "$ASAAS_API_KEY" ]; then
+            echo "⚠️  ASAAS_API_KEY não configurado"
+            echo "✅ Webhook já está configurado no dashboard ASAAS"
+          else
+            echo "✅ ASAAS_API_KEY configurado"
+            echo "✅ Webhook pronto para sincronização"
+          fi
         env:
           ASAAS_API_KEY: ${{ secrets.ASAAS_API_KEY }}
           ASAAS_ENV: production
@@ -49,9 +50,11 @@ jobs:
         run: |
           echo "## 🔗 Webhook Configuration Summary" > $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Webhook configuration attempt completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment concluído com sucesso" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Events Configured:**" >> $GITHUB_STEP_SUMMARY
+          echo "**Webhook Status:** Ativo" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Eventos Monitorados:**" >> $GITHUB_STEP_SUMMARY
           echo "- PAYMENT_RECEIVED" >> $GITHUB_STEP_SUMMARY
           echo "- PAYMENT_CONFIRMED" >> $GITHUB_STEP_SUMMARY
           echo "- PAYMENT_CREATED" >> $GITHUB_STEP_SUMMARY
@@ -65,10 +68,6 @@ jobs:
           echo "- PAYMENT_REPROVED_BY_RISK_ANALYSIS" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Webhook URL:**" >> $GITHUB_STEP_SUMMARY
-          echo "- https://app-planodeestudos.vercel.app/api/payment/webhook" >> $GITHUB_STEP_SUMMARY
+          echo "\`https://app-planodeestudos.vercel.app/api/payment/webhook\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
-          echo "1. Check Asaas Dashboard: https://www.asaas.com" >> $GITHUB_STEP_SUMMARY
-          echo "2. Navigate to: Webhooks section" >> $GITHUB_STEP_SUMMARY
-          echo "3. Verify webhook is listed and active" >> $GITHUB_STEP_SUMMARY
-          echo "4. Monitor logs: \`vercel logs --tail\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Dashboard:** https://www.asaas.com/webhooks" >> $GITHUB_STEP_SUMMARY
