@@ -1,0 +1,36 @@
+name: Process Reminder Queue
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reminder processor
+        env:
+          APP_URL: https://ordexx.vercel.app
+          CRON_SECRET: ${{ secrets.NOTIFICATION_CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing secret: NOTIFICATION_CRON_SECRET"
+            exit 1
+          fi
+
+          echo "Calling reminder queue processor..."
+          response=$(curl -sS -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST "$APP_URL/api/notifications/auto-alerts/process?limit=150" \
+            -H "x-cron-secret: $CRON_SECRET")
+
+          body=$(echo "$response" | sed '$d')
+          status=$(echo "$response" | tail -n 1 | cut -d: -f2)
+
+          echo "Status: $status"
+          echo "Body: $body"
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Reminder processing failed"
+            exit 1
+          fi

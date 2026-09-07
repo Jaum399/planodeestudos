@@ -1,0 +1,7 @@
+build-ios	Sync Capacitor iOS	﻿2026-04-22T13:34:09.6279620Z ##[group]Run npx cap sync ios
+build-ios	Sync Capacitor iOS	2026-04-22T13:34:09.6279920Z [36;1mnpx cap sync ios[0m
+build-ios	Sync Capacitor iOS	2026-04-22T13:34:09.6329790Z shell: /bin/bash -e {0}
+build-ios	Sync Capacitor iOS	2026-04-22T13:34:09.6329950Z ##[endgroup]
+build-ios	Sync Capacitor iOS	2026-04-22T13:34:10.1500170Z npm error could not determine executable to run
+build-ios	Sync Capacitor iOS	2026-04-22T13:34:10.1503850Z npm error A complete log of this run can be found in: /Users/runner/.npm/_logs/2026-04-22T13_34_09_711Z-debug-0.log
+build-ios	Sync Capacitor iOS	2026-04-22T13:34:10.1568430Z ##[error]Process completed with exit code 1.

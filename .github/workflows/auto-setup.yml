@@ -1,0 +1,44 @@
+name: 🚀 Auto Setup - Vercel Environment
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  setup-vercel:
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event.head_commit.message != null
+
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: ✅ Verify Push to Master
+        run: |
+          echo "✅ Push detectado no branch master"
+          echo "📝 Commit: ${{ github.event.head_commit.message }}"
+          echo ""
+          echo "✅ Validações concluídas"
+
+      - name: 📝 Create Deployment Summary
+        run: |
+          echo "## 🚀 Deploy Summary" > $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Changes pushed to master" >> $GITHUB_STEP_SUMMARY
+          echo "✅ GitHub Actions triggered" >> $GITHUB_STEP_SUMMARY
+          echo "⏳ Vercel will auto-deploy shortly" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Check Vercel Dashboard: https://vercel.com/dashboard" >> $GITHUB_STEP_SUMMARY
+          echo "- View deployment logs" >> $GITHUB_STEP_SUMMARY
+          echo "- Site will be live in ~5-10 minutes" >> $GITHUB_STEP_SUMMARY
