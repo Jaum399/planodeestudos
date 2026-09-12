@@ -41,26 +41,8 @@ export default function MaterialFlashcardModal({ isOpen, onClose, onGenerate, de
 
   const handleFile = (file?: File) => {
     if (!file) return;
-    
-    // Validate file type
-    const isValidType = materialType === 'pdf'
-      ? file.type === 'application/pdf' || file.name.endsWith('.pdf')
-      : file.type.startsWith('video/');
-    
-    if (!isValidType) {
-      const typeLabel = materialType === 'pdf' ? 'PDF' : 'vídeo';
-      setError(`Arquivo inválido. Selecione um arquivo ${typeLabel}.`);
-      return;
-    }
-    
-    if (file.size > 900 * 1024 * 1024) {
-      setError('Arquivo muito grande. Máximo 900 MB.');
-      return;
-    }
-    
     setSelectedFileName(file.name);
     setSelectedFile(file);
-    setError('');
     if (!materialName.trim()) {
       setMaterialName(file.name.replace(/\.(pdf|mp4|webm|mov|mkv)$/i, ''));
     }
@@ -89,21 +71,11 @@ export default function MaterialFlashcardModal({ isOpen, onClose, onGenerate, de
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setError('');
     const finalTheme = theme.trim() || materialName.trim();
-    
     if (materialType === 'pdf' && !selectedFile) {
-      setError('Selecione um arquivo PDF válido para criar cards baseados nele.');
+      setError('Selecione um arquivo PDF para criar cards baseados nele.');
       return;
     }
-    
-    if (materialType === 'pdf' && selectedFile) {
-      if (!selectedFile.type.includes('pdf') && !selectedFile.name.endsWith('.pdf')) {
-        setError('Formato de arquivo inválido. Por favor, selecione um arquivo PDF.');
-        return;
-      }
-    }
-    
     const canAutoTranscribeVideo = materialType === 'video' && selectedFile && selectedFile.size <= 3 * 1024 * 1024;
     if (materialType === 'video' && sourceText.trim().length < 40 && !canAutoTranscribeVideo) {
       setError('Para criar cards de um vídeo, envie a transcrição ou cole pelo menos 40 caracteres do conteúdo.');
