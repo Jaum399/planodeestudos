@@ -16,7 +16,7 @@
  */
 const nodemailer = require('nodemailer');
 
-const DEFAULT_EMAIL_USER = 'email-entcnologiaptga@gmail.com';
+const DEFAULT_EMAIL_USER = 'entcnologiaptga@gmail.com';
 const DEFAULT_FRONTEND_URL = 'https://app-tigas-entregas.vercel.app';
 
 function normalizeUrl(url) {
@@ -311,7 +311,9 @@ async function sendReminderEmail(user, reminder) {
   `;
 
   const result = await sendEmail(user.email, '📌 Lembrete importante — AppMentoria', baseTemplate('Lembrete importante', body));
-  return { sent: true, provider: result?.provider || 'unknown' };
+  return result?.skipped
+    ? { sent: false, skipped: true, reason: 'not_configured' }
+    : { sent: true, provider: result?.provider || 'unknown' };
 }
 
 module.exports = {

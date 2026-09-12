@@ -233,7 +233,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-sm font-semibold">{t('dash_unlock_features')}</p>
-            <p className="text-gray-400 text-xs">{t('dash_unlock_desc')} <span className="text-primary-400 font-medium">R$49,90/mês</span></p>
+            <p className="text-gray-400 text-xs">{t('dash_unlock_desc')} <span className="text-primary-400 font-medium">R$19,90/mês</span></p>
           </div>
           <div className="flex items-center gap-1 text-xs text-primary-400 font-semibold shrink-0 group-hover:translate-x-1 transition-transform">
             {t('dash_subscribe')} <Zap size={12} />

@@ -6,6 +6,44 @@ const { authenticate, requireAccess } = require('../middleware/auth');
 const router = express.Router();
 router.use(authenticate, requireAccess);
 
+const COURSE_QUESTIONS = {
+  direito: [
+    ['Constitucional', 'O princípio da legalidade na Administração Pública significa que o agente público:', ['Pode fazer tudo que não é proibido', 'Só pode agir conforme autorização legal', 'Age conforme sua preferência', 'Pode afastar a lei por costume'], 1, 'A Administração Pública está vinculada à lei.'],
+    ['Administrativo', 'A modalidade de licitação voltada à aquisição de bens e serviços comuns é:', ['Concurso', 'Leilão', 'Pregão', 'Diálogo competitivo'], 2, 'O pregão é utilizado para bens e serviços comuns.'],
+    ['Civil', 'A responsabilidade civil subjetiva exige, em regra, a demonstração de:', ['Dano apenas', 'Dano e nexo causal, sem culpa', 'Dano, nexo causal e culpa', 'Enriquecimento sem causa'], 2, 'Na responsabilidade subjetiva, a culpa é necessária.'],
+  ],
+  enem: [
+    ['Matemática', 'Se uma função afim passa pelos pontos (0, 3) e (2, 7), seu coeficiente angular é:', ['1', '2', '3', '4'], 1, 'O coeficiente é (7 - 3) / 2 = 2.'],
+    ['Português', 'Em um texto argumentativo, a tese corresponde:', ['Ao exemplo final', 'À ideia central defendida', 'À referência bibliográfica', 'À descrição do cenário'], 1, 'A tese é a ideia central defendida.'],
+    ['História', 'A Constituição brasileira conhecida como Constituição Cidadã foi promulgada em:', ['1964', '1967', '1988', '1992'], 2, 'A Constituição Federal vigente foi promulgada em 1988.'],
+  ],
+  concursos: [
+    ['Português', 'A finalidade principal da coesão textual é:', ['Criar contradições', 'Ligar formalmente as partes do texto', 'Substituir a argumentação', 'Eliminar os verbos'], 1, 'A coesão conecta as partes do texto.'],
+    ['Raciocínio Lógico', 'A negação da proposição “todos os candidatos estudaram” é:', ['Nenhum candidato estudou', 'Pelo menos um candidato não estudou', 'Todos não estudaram', 'Alguns candidatos estudaram'], 1, 'A negação de “todos” é “pelo menos um não”.'],
+    ['Constitucional', 'São princípios expressos da Administração Pública no artigo 37 da Constituição:', ['LIMPE', 'Culpabilidade e ampla defesa', 'Livre iniciativa e concorrência', 'Anterioridade e noventena'], 0, 'Legalidade, impessoalidade, moralidade, publicidade e eficiência formam LIMPE.'],
+  ],
+  engenharia: [
+    ['Cálculo', 'A derivada de f(x) = x² no ponto x = 3 é:', ['3', '6', '9', '12'], 1, 'A derivada é 2x; em x = 3, resulta 6.'],
+    ['Física', 'Pela segunda lei de Newton, a força resultante é igual a:', ['Massa dividida pela aceleração', 'Massa vezes aceleração', 'Aceleração dividida pela massa', 'Massa vezes velocidade'], 1, 'A segunda lei é F = m · a.'],
+    ['Álgebra', 'O determinante da matriz [[1, 2], [3, 4]] é:', ['-2', '2', '5', '10'], 0, 'O determinante é 1·4 - 2·3 = -2.'],
+  ],
+  faculdade: [
+    ['Metodologia de Estudo', 'A revisão espaçada recomenda:', ['Revisar apenas na véspera', 'Distribuir revisões ao longo do tempo', 'Evitar testes práticos', 'Usar apenas leitura passiva'], 1, 'A técnica distribui revisões em intervalos crescentes.'],
+    ['Planejamento', 'Uma boa sessão de estudo deve começar com:', ['Uma meta específica e mensurável', 'Várias tarefas sem prioridade', 'Notificações ativadas', 'A leitura de todo o material'], 0, 'Metas específicas orientam o foco e medem o progresso.'],
+    ['Leitura Ativa', 'Uma prática de leitura ativa é:', ['Sublinhar tudo', 'Fazer perguntas e recuperar ideias sem consultar o texto', 'Ler sem pausas', 'Ignorar exemplos'], 1, 'Perguntas e recuperação ativa fortalecem a retenção.'],
+  ],
+};
+
+function resolveCourseKey(area) {
+  const normalized = String(area || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/medicina|residencia|revalida/.test(normalized)) return 'medicina';
+  if (/direito|oab|magistratura/.test(normalized)) return 'direito';
+  if (/enem|vestibular/.test(normalized)) return 'enem';
+  if (/concurso|militar|publico/.test(normalized)) return 'concursos';
+  if (/engenharia/.test(normalized)) return 'engenharia';
+  return 'faculdade';
+}
+
 const SEED_QUESTIONS = [
   {
     _id: 'qb-1',
@@ -51,12 +89,42 @@ const SEED_QUESTIONS = [
 
 async function ensureSeed() {
   const { questionBank } = getDatabase();
-  const count = await questionBank.countDocuments();
-  if (count > 0) return;
-
   const now = new Date().toISOString();
-  const payload = SEED_QUESTIONS.map((q) => ({ ...q, created_at: now }));
-  await questionBank.insertMany(payload);
+  const legacyQuestions = await questionBank.find({ course: { $exists: false } }).lean().exec();
+  await Promise.all(legacyQuestions.map((question) => questionBank.updateOne(
+    { _id: question._id },
+    { $set: { course: 'medicina' } },
+  )));
+  const courseKeys = ['medicina', ...Object.keys(COURSE_QUESTIONS)];
+  const counts = {};
+  await Promise.all(courseKeys.map(async (course) => {
+    counts[course] = await questionBank.countDocuments({ course });
+  }));
+  const payload = [];
+
+  if (!counts.medicina) {
+    payload.push(...SEED_QUESTIONS.map((question) => ({ ...question, course: 'medicina', created_at: now })));
+  }
+
+  Object.entries(COURSE_QUESTIONS).forEach(([course, questions]) => {
+    if (counts[course]) return;
+    questions.forEach(([subject, statement, options, correct_index, explanation], index) => {
+      payload.push({
+        _id: `qb-${course}-${index + 1}`,
+        course,
+        subject,
+        phase: 'geral',
+        statement,
+        options,
+        correct_index,
+        explanation,
+        difficulty: index + 1,
+        created_at: now,
+      });
+    });
+  });
+
+  if (payload.length > 0) await questionBank.insertMany(payload);
 }
 
 function sanitizeQuestion(doc) {
@@ -74,18 +142,12 @@ router.get('/', async (req, res) => {
     const phase = String(req.query.phase || '').trim();
     const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
 
-    // Auto-filter by user's area if no subject specified
-    if (!subject) {
-      const { users } = getDatabase();
-      const user = await users.findOne({ _id: req.user.id });
-      if (user?.area) {
-        subject = user.area;
-      }
-    }
-
-    const query = {};
+    const { users } = getDatabase();
+    const user = await users.findOne({ _id: req.user.id });
+    const course = resolveCourseKey(user?.area);
+    const query = { course };
     if (subject) query.subject = new RegExp(subject, 'i');
-    if (phase) query.phase = phase;
+    if (phase && course === 'medicina') query.phase = phase;
 
     const { questionBank, questionAttempts } = getDatabase();
     const questions = await questionBank.find(query).limit(limit);
@@ -119,6 +181,12 @@ router.post('/attempt', async (req, res) => {
     const { questionBank, questionAttempts } = getDatabase();
     const question = await questionBank.findOne({ _id: question_id });
     if (!question) return res.status(404).json({ error: 'Questão não encontrada' });
+
+    const { users } = getDatabase();
+    const user = await users.findOne({ _id: req.user.id });
+    if (question.course !== resolveCourseKey(user?.area)) {
+      return res.status(403).json({ error: 'Esta questão não pertence ao curso selecionado.' });
+    }
 
     const isCorrect = Number(selected_index) === Number(question.correct_index);
 
@@ -166,8 +234,12 @@ router.post('/simulate', async (req, res) => {
     const answers = Array.isArray(req.body.answers) ? req.body.answers : [];
     const durationSeconds = Math.max(Number(req.body.duration_seconds || 0), 0);
 
+    const { users } = getDatabase();
+    const user = await users.findOne({ _id: req.user.id });
+    const course = resolveCourseKey(user?.area);
     const { questionBank, mockExamResults } = getDatabase();
-    const query = phase && phase !== 'geral' ? { phase } : {};
+    const query = { course };
+    if (phase && phase !== 'geral' && course === 'medicina') query.phase = phase;
     const candidates = await questionBank.find(query);
 
     if (candidates.length === 0) {

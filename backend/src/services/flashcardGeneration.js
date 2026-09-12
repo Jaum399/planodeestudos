@@ -2,97 +2,8 @@ const { randomUUID } = require('crypto');
 const { getDatabase } = require('../database');
 const aiProvider = require('./aiProvider');
 
-const STOP_WORDS = new Set([
-  'de', 'da', 'do', 'dos', 'das', 'a', 'o', 'e', 'em', 'para', 'por', 'com', 'no', 'na', 'nos', 'nas',
-  'um', 'uma', 'que', 'se', 'ao', 'aos', 'as', 'como', 'mais', 'menos', 'ou', 'ser', 'estar', 'sobre',
-]);
-
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
-}
-
-function tokenize(text) {
-  return String(text || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter((token) => token.length > 2 && !STOP_WORDS.has(token));
-}
-
-function splitSentences(text) {
-  return String(text || '')
-    .replace(/\s+/g, ' ')
-    .split(/(?<=[.!?])\s+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence.length >= 25);
-}
-
-function summarizeSnippet(text) {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
-  if (normalized.length <= 240) return normalized;
-  return `${normalized.slice(0, 237).trim()}...`;
-}
-
-function extractConcepts(theme, subject) {
-  const merged = `${theme || ''} ${subject || ''}`;
-  const uniq = [];
-  const seen = new Set();
-
-  for (const token of tokenize(merged)) {
-    if (seen.has(token)) continue;
-    seen.add(token);
-    uniq.push(token);
-  }
-
-  if (uniq.length === 0) {
-    return ['conceito', 'aplicacao', 'revisao'];
-  }
-
-  return uniq.slice(0, 10);
-}
-
-function buildQuestion(index, themeLabel, concept, snippet) {
-  if (snippet) {
-    const templates = [
-      `No trecho "${snippet}", qual e o conceito central para ${themeLabel}?`,
-      `A partir do trecho "${snippet}", o que voce precisa lembrar para ${themeLabel}?`,
-      `Qual ponto de prova pode ser cobrado com base em: "${snippet}"?`,
-      `Explique o trecho "${snippet}" em uma frase objetiva para revisar ${themeLabel}.`,
-    ];
-    return templates[index % templates.length];
-  }
-
-  const templates = [
-    `No tema "${themeLabel}", como voce explicaria o conceito de ${concept}?`,
-    `Qual e a definicao curta de ${concept} em ${themeLabel}?`,
-    `Quando ${concept} aparece em ${themeLabel}, qual e o ponto mais importante?`,
-    `Quais sinais indicam que ${concept} e central em ${themeLabel}?`,
-    `Qual erro comum deve ser evitado ao estudar ${concept} em ${themeLabel}?`,
-  ];
-  return templates[index % templates.length];
-}
-
-function buildAnswer(index, themeLabel, concept, snippet) {
-  if (snippet) {
-    const templates = [
-      `Resumo do trecho: ${snippet}. Relacione isso com ${themeLabel} e memorize o criterio principal.`,
-      `Esse trecho destaca um ponto-chave de ${themeLabel}. Revise definicao, contexto e aplicacao pratica.`,
-      `Transforme o trecho em checklist: conceito, quando aparece e como resolver em ${themeLabel}.`,
-      `Regra de revisao: releia o trecho, explique com suas palavras e conecte com exemplos de ${themeLabel}.`,
-    ];
-    return templates[index % templates.length];
-  }
-
-  const templates = [
-    `${concept} e um ponto-chave de ${themeLabel}. Revise definicao, criterio de aplicacao e exemplo pratico.`,
-    `Resumo rapido: em ${themeLabel}, ${concept} conecta teoria e decisao pratica. Foque em quando usar e por que usar.`,
-    `Para memorizar ${concept}: (1) conceito base, (2) contexto de uso em ${themeLabel}, (3) diferenca para temas parecidos.`,
-    `Checklist de prova para ${concept}: definicao correta, criterio principal e implicacao clinica/pratica em ${themeLabel}.`,
-    `${concept} em ${themeLabel}: pense em gatilho, conduta e revisao posterior para consolidar memoria de longo prazo.`,
-  ];
-  return templates[index % templates.length];
 }
 
 function normalizeTheme(theme) {
@@ -133,8 +44,32 @@ async function createFlashcardsForTheme({ userId, theme, subject, quantity, deck
   const safeQty = clamp(Number(quantity || 8), 3, 20);
   const safeSubject = String(subject || '').trim() || 'Estudo';
   const effectiveTheme = normalizedTheme || safeSubject || 'Conteudo personalizado';
-  const concepts = extractConcepts(effectiveTheme, safeSubject);
-  const snippets = splitSentences(normalizedSource).slice(0, 20);
+  if (!aiProvider.isAvailable()) {
+    throw new Error('AI_NOT_CONFIGURED');
+  }
+
+  let cardPairs;
+  try {
+    cardPairs = await aiProvider.generateFlashcardsWithAI({
+      theme: effectiveTheme,
+      subject: safeSubject,
+      quantity: safeQty,
+      sourceText: normalizedSource || null,
+    });
+  } catch (err) {
+    console.error('[Flashcard] AI generation failed:', err.message);
+    throw new Error('AI_GENERATION_FAILED');
+  }
+
+  if (!Array.isArray(cardPairs) || cardPairs.length !== safeQty) {
+    throw new Error('AI_INVALID_FLASHCARDS');
+  }
+
+  const cardsAreValid = cardPairs.every((card) => (
+    card && typeof card.question === 'string' && card.question.trim().length >= 8
+    && typeof card.answer === 'string' && card.answer.trim().length >= 8
+  ));
+  if (!cardsAreValid) throw new Error('AI_INVALID_FLASHCARDS');
 
   const { flashcards } = getDatabase();
   const now = new Date().toISOString();
@@ -145,28 +80,10 @@ async function createFlashcardsForTheme({ userId, theme, subject, quantity, deck
     targetDeckId = aiDeck._id;
   }
 
-  let cardPairs = null;
-
-  if (aiProvider.isAvailable()) {
-    try {
-      cardPairs = await aiProvider.generateFlashcardsWithAI({
-        theme: effectiveTheme,
-        subject: safeSubject,
-        quantity: safeQty,
-        sourceText: normalizedSource || null,
-      });
-    } catch (err) {
-      console.warn('[Flashcard] AI generation falhou, usando templates:', err.message);
-    }
-  }
-
   const cards = [];
   for (let i = 0; i < safeQty; i += 1) {
-    const concept = concepts[i % concepts.length];
-    const snippet = snippets.length > 0 ? summarizeSnippet(snippets[i % snippets.length]) : null;
-
-    const question = cardPairs?.[i]?.question || buildQuestion(i, effectiveTheme, concept, snippet);
-    const answer = cardPairs?.[i]?.answer || buildAnswer(i, effectiveTheme, concept, snippet);
+    const question = cardPairs[i].question.trim();
+    const answer = cardPairs[i].answer.trim();
 
     cards.push({
       _id: randomUUID(),

@@ -153,7 +153,7 @@ export const analyticsApi = {
 // Payment
 export const paymentApi = {
   getStatus: () => api.get('/payment/status'),
-  createCheckout: (planType: string = 'standard') => api.post('/payment/create-checkout', { planType }),
+  createCheckout: (planType: string = 'premium') => api.post('/payment/create-checkout', { planType }),
   getPortal: () => api.get('/payment/portal'),
 };
 
@@ -233,6 +233,8 @@ export const studyToolsApi = {
     api.post(`/study-tools/summaries/${summaryId}/to-flashcards`),
   generateFlashcardsByTheme: (data: { theme?: string; quantity?: number; subject?: string; deck_id?: string; source_text?: string }) =>
     api.post('/study-tools/flashcards/generate', data),
+  transcribeVideo: (data: { file_name: string; mime_type: string; data_url: string }) =>
+    api.post('/study-tools/video/transcribe', data),
   dailyPlan: () => api.get('/study-tools/daily-plan'),
 };
 

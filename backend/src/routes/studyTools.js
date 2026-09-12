@@ -4,6 +4,7 @@ const { getDatabase } = require('../database');
 const { authenticate, requireAccess } = require('../middleware/auth');
 const { createFlashcardsForTheme } = require('../services/flashcardGeneration');
 const aiProvider = require('../services/aiProvider');
+const geminiService = require('../services/geminiService');
 
 const router = express.Router();
 router.use(authenticate, requireAccess);
@@ -236,10 +237,38 @@ router.post('/flashcards/generate', async (req, res) => {
     return res.status(201).json(result);
   } catch (error) {
     console.error('Generate flashcards by theme error:', error);
+    if (['AI_NOT_CONFIGURED', 'AI_GENERATION_FAILED', 'AI_INVALID_FLASHCARDS'].includes(error?.message)) {
+      return res.status(503).json({
+        error: 'A IA não conseguiu gerar cards reais neste momento. Verifique a configuração do provedor e tente novamente.',
+        code: error.message,
+      });
+    }
     if (error?.message === 'theme_required') {
       return res.status(400).json({ error: 'theme e obrigatorio' });
     }
     return res.status(500).json({ error: 'Erro ao gerar flashcards automaticamente' });
+  }
+});
+
+// POST /api/study-tools/video/transcribe
+router.post('/video/transcribe', async (req, res) => {
+  try {
+    const { file_name, mime_type, data_url } = req.body || {};
+    if (!file_name || !/^video\//i.test(String(mime_type || '')) || !String(data_url || '').includes(',')) {
+      return res.status(400).json({ error: 'Envie um arquivo de vídeo válido.' });
+    }
+    const rawBase64 = String(data_url).split(',')[1] || '';
+    if (Buffer.byteLength(rawBase64, 'base64') > 3 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Vídeos acima de 3 MB precisam ser enviados com transcrição.' });
+    }
+    const text = await geminiService.transcribeVideoWithAI({ mimeType: mime_type, dataUrl: data_url });
+    return res.json({ text, file_name });
+  } catch (error) {
+    console.error('Video transcription error:', error);
+    if (['GEMINI_NOT_CONFIGURED', 'VIDEO_TRANSCRIPTION_EMPTY'].includes(error?.message)) {
+      return res.status(503).json({ error: 'A transcrição automática não está disponível. Configure a chave Gemini ou envie a transcrição.', code: error.message });
+    }
+    return res.status(422).json({ error: 'Não foi possível transcrever este vídeo. Envie a transcrição manualmente.' });
   }
 });
 

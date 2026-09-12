@@ -18,45 +18,19 @@ const ASAAS_FAILURE_EVENTS = new Set([
   'PAYMENT_REPROVED_BY_RISK_ANALYSIS',
 ]);
 
-const PLAN_STANDARD = 'standard';
 const PLAN_PREMIUM = 'premium';
-const PLAN_PREMIUM_MEDHUB = 'premium_medhub';
+const SINGLE_MONTHLY_PRICE = 19.90;
 
-function normalizePlanType(value) {
-  const normalized = String(value || '').toLowerCase();
-  if (normalized === PLAN_PREMIUM_MEDHUB || normalized === 'medhub') return PLAN_PREMIUM_MEDHUB;
-  if (normalized === PLAN_PREMIUM || normalized === 'p') return PLAN_PREMIUM;
-  return PLAN_STANDARD;
+function normalizePlanType(_value) {
+  return PLAN_PREMIUM;
 }
 
 function getPlanAmount(planType) {
-  const normalized = normalizePlanType(planType);
-
-  if (normalized === PLAN_PREMIUM_MEDHUB) {
-    const envValue = process.env.PREMIUM_MEDHUB_MONTHLY_PRICE;
-    const fallback = 89.9;
-    const amount = Number(envValue || fallback);
-    return Number((Number.isFinite(amount) && amount > 0 ? amount : fallback).toFixed(2));
-  }
-
-  if (normalized === PLAN_PREMIUM) {
-    const envValue = process.env.PREMIUM_MONTHLY_PRICE;
-    const fallback = 49.9;
-    const amount = Number(envValue || fallback);
-    return Number((Number.isFinite(amount) && amount > 0 ? amount : fallback).toFixed(2));
-  }
-
-  const envValue = process.env.PREMIUM_STANDARD_MONTHLY_PRICE;
-  const fallback = 50.0;
-  const amount = Number(envValue || fallback);
-  return Number((Number.isFinite(amount) && amount > 0 ? amount : fallback).toFixed(2));
+  return SINGLE_MONTHLY_PRICE;
 }
 
 function resolvePlanSlug(planType) {
-  const normalized = normalizePlanType(planType);
-  if (normalized === PLAN_PREMIUM_MEDHUB) return 'premium_medhub';
-  if (normalized === PLAN_PREMIUM) return 'premium';
-  return 'basic';
+  return PLAN_PREMIUM;
 }
 
 function getAsaasConfig() {
@@ -214,7 +188,7 @@ async function ensureAsaasCustomer(user, users) {
   return created.id;
 }
 
-async function applyPaymentStatusByAsaasPayment(userId, payment, users, pendingPlanType = PLAN_STANDARD) {
+async function applyPaymentStatusByAsaasPayment(userId, payment, users, pendingPlanType = PLAN_PREMIUM) {
   const now = new Date().toISOString();
   const status = (payment?.status || '').toUpperCase();
   const planSlug = resolvePlanSlug(pendingPlanType);
@@ -282,7 +256,7 @@ router.get('/status', authenticate, async (req, res) => {
   if (user?.asaasPaymentId && user?.subscriptionStatus === 'pending' && getAsaasConfig()) {
     try {
       const payment = await asaasRequest('GET', `/payments/${user.asaasPaymentId}`);
-      await applyPaymentStatusByAsaasPayment(user._id, payment, users, user?.pending_plan_type || PLAN_STANDARD);
+      await applyPaymentStatusByAsaasPayment(user._id, payment, users, user?.pending_plan_type || PLAN_PREMIUM);
       user = await users.findOne({ _id: req.user.id });
     } catch (err) {
       console.warn('[Asaas] Falha ao sincronizar status pendente:', err.message);
@@ -322,12 +296,7 @@ router.post('/create-checkout', authenticate, async (req, res) => {
     const customerId = await ensureAsaasCustomer(user, users);
     const baseUrl = process.env.FRONTEND_URL || 'https://app-tigas-entregas.vercel.app';
 
-    let planDescription = 'Ordex Premium - mensal';
-    if (selectedPlanType === PLAN_PREMIUM_MEDHUB) {
-      planDescription = 'Ordex Premium + Centro Medico - mensal';
-    } else if (selectedPlanType === PLAN_STANDARD) {
-      planDescription = 'Ordex Básico - mensal';
-    }
+    const planDescription = 'Ordex Premium - mensal';
 
     const payload = {
       customer: customerId,
@@ -428,7 +397,7 @@ router.post('/webhook', async (req, res) => {
     }
 
     if (ASAAS_SUCCESS_EVENTS.has(eventName)) {
-      const resolvedPlan = resolvePlanSlug(user.pending_plan_type || PLAN_STANDARD);
+      const resolvedPlan = resolvePlanSlug(user.pending_plan_type || PLAN_PREMIUM);
       await users.findOneAndUpdate(
         { _id: user._id },
         {
@@ -454,7 +423,7 @@ router.post('/webhook', async (req, res) => {
             subscriptionStatus: 'pending',
             asaasPaymentId: officialPayment.id,
             asaasPaymentStatus: (officialPayment.status || 'PENDING').toUpperCase(),
-            pending_plan_type: user.pending_plan_type || PLAN_STANDARD,
+            pending_plan_type: user.pending_plan_type || PLAN_PREMIUM,
             updated_at: now,
           },
         }

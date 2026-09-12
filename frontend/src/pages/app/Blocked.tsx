@@ -48,7 +48,7 @@ export default function Blocked() {
               <p className="text-gray-400 text-sm">Acesso completo a todos os recursos</p>
             </div>
             <div className="text-right">
-              <p className="text-primary-400 font-bold text-2xl">R$49,90</p>
+              <p className="text-primary-400 font-bold text-2xl">R$19,90</p>
               <p className="text-gray-500 text-xs">/mês</p>
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function Blocked() {
             ) : (
               <CreditCard size={18} />
             )}
-            {reason === 'payment_required' ? 'Assinar agora — R$49,90/mês' : 'Regularizar pagamento'}
+            {reason === 'payment_required' ? 'Assinar agora — R$19,90/mês' : 'Regularizar pagamento'}
           </button>
 
           {error && <p className="text-red-400 text-sm mt-3 text-center">{error}</p>}

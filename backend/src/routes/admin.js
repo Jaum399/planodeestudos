@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, requireAccess } = require('../middleware/auth');
+const SINGLE_MONTHLY_PRICE = 19.90;
 
 // Admin-only middleware
 function requireAdmin(req, res, next) {
@@ -24,19 +25,19 @@ router.get('/plans', authenticate, requireAdmin, (req, res) => {
     const plans = {
       basic: {
         name: 'Plano Básico',
-        price: Number(process.env.PREMIUM_STANDARD_MONTHLY_PRICE || 50.00),
+        price: SINGLE_MONTHLY_PRICE,
         features: ['Flashcards', 'Questionários', 'Cursos básicos'],
         billing_cycle: 'monthly',
       },
       premium: {
         name: 'Plano Premium',
-        price: Number(process.env.PREMIUM_MONTHLY_PRICE || 75.00),
+        price: SINGLE_MONTHLY_PRICE,
         features: ['Tudo do Básico', 'Analytics', 'Cronograma automático', 'Jarvis IA'],
         billing_cycle: 'monthly',
       },
       premium_medhub: {
         name: 'Plano Premium+ MedHub',
-        price: Number(process.env.PREMIUM_MEDHUB_MONTHLY_PRICE || 120.00),
+        price: SINGLE_MONTHLY_PRICE,
         features: ['Tudo do Premium', 'Centro Médico', 'Suporte prioritário'],
         billing_cycle: 'monthly',
       },
@@ -63,7 +64,7 @@ router.put('/plans/:planType/price', authenticate, requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'Preço inválido' });
     }
 
-    const normalizedPrice = Number(price.toFixed(2));
+    const normalizedPrice = SINGLE_MONTHLY_PRICE;
 
     // Map plan type to environment variable
     let envVar;
@@ -136,11 +137,7 @@ router.get('/status', authenticate, requireAdmin, (req, res) => {
           connected: process.env.MONGODB_URI ? 'configured' : 'not_configured',
         },
       },
-      prices: {
-        basic: Number(process.env.PREMIUM_STANDARD_MONTHLY_PRICE || 50.00),
-        premium: Number(process.env.PREMIUM_MONTHLY_PRICE || 75.00),
-        medhub: Number(process.env.PREMIUM_MEDHUB_MONTHLY_PRICE || 120.00),
-      },
+      prices: { basic: SINGLE_MONTHLY_PRICE, premium: SINGLE_MONTHLY_PRICE, medhub: SINGLE_MONTHLY_PRICE },
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),
     });
@@ -205,6 +202,206 @@ router.put('/keys/:keyType', authenticate, requireAdmin, (req, res) => {
   } catch (error) {
     console.error('Update key error:', error);
     res.status(500).json({ error: 'Erro ao atualizar chave' });
+  }
+});
+
+// ──────────── NOVAS ROTAS: DECKS PRÉ-CONFIGURADOS E NOTIFICAÇÕES ────────────
+
+// ── POST /api/admin/seed-presets - Executar seed de decks especializados ────────
+router.post('/seed-presets', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { seedPresetsDecks } = require('../seeds/presetDecks');
+    const result = await seedPresetsDecks();
+    return res.json({
+      success: true,
+      message: result.message,
+      decksCreated: result.decksCreated,
+      totalCards: result.totalCards,
+    });
+  } catch (error) {
+    console.error('Seed error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Erro ao executar seed',
+    });
+  }
+});
+
+// ── GET /api/admin/notifications/status - Dashboard de notificações ─────────────
+router.get('/notifications/status', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { getDatabase } = require('../database');
+    const { notificationJobs, deadlineReminders, users } = getDatabase();
+
+    // Estatísticas de jobs
+    const jobStats = await Promise.all([
+      notificationJobs.countDocuments({ status: 'queued' }),
+      notificationJobs.countDocuments({ status: 'processing' }),
+      notificationJobs.countDocuments({ status: 'retrying' }),
+      notificationJobs.countDocuments({ status: 'sent' }),
+      notificationJobs.countDocuments({ status: 'failed' }),
+    ]);
+
+    const [queued, processing, retrying, sent, failed] = jobStats;
+
+    // Estatísticas de lembretes
+    const reminders = await deadlineReminders.countDocuments({ active: true });
+    const remindersInactive = await deadlineReminders.countDocuments({ active: false });
+
+    // Jobs que falharam
+    const failedJobs = await notificationJobs
+      .find({ status: 'failed' })
+      .limit(10)
+      .sort({ updated_at: -1 });
+
+    // Próximos lembretes
+    const now = new Date().toISOString();
+    const upcomingReminders = await deadlineReminders
+      .find({ active: true, due_at: { $gte: now } })
+      .limit(10)
+      .sort({ due_at: 1 });
+
+    const userCount = await users.countDocuments({});
+    const usersWithNotifications = await notificationJobs
+      .distinct('user_id', { status: { $in: ['queued', 'processing'] } });
+
+    return res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      jobs: {
+        queued,
+        processing,
+        retrying,
+        sent,
+        failed,
+        total: queued + processing + retrying + sent + failed,
+      },
+      reminders: {
+        active: reminders,
+        inactive: remindersInactive,
+        total: reminders + remindersInactive,
+      },
+      users: {
+        total: userCount,
+        withPendingNotifications: usersWithNotifications.length,
+      },
+      recentFailures: failedJobs.slice(0, 5).map(j => ({
+        jobId: j._id,
+        reminderId: j.reminder_id,
+        userId: j.user_id,
+        attempts: j.attempt_count,
+        lastError: j.last_error,
+        updatedAt: j.updated_at,
+      })),
+      upcomingReminders: upcomingReminders.map(r => ({
+        reminderId: r._id,
+        title: r.title,
+        kind: r.kind,
+        dueAt: r.due_at,
+      })),
+    });
+  } catch (error) {
+    console.error('Notifications status error:', error);
+    return res.status(500).json({ error: 'Erro ao buscar status' });
+  }
+});
+
+// ── POST /api/admin/notifications/process-queue - Forçar processamento ─────────
+router.post('/notifications/process-queue', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { processDueNotificationJobs } = require('../services/reminderNotifications');
+    const { limit = 50 } = req.body;
+    const safeLimit = Math.min(Math.max(Number(limit), 1), 500);
+
+    const summary = await processDueNotificationJobs({ limit: safeLimit });
+
+    return res.json({
+      success: true,
+      processed: summary.processed,
+      succeeded: summary.succeeded,
+      failed: summary.failed,
+    });
+  } catch (error) {
+    console.error('Process queue error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// ── POST /api/admin/notifications/schedule-daily - Agendar digest diário ───────
+router.post('/notifications/schedule-daily', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { enqueueDailyReminderDigests } = require('../services/reminderNotifications');
+    const { horizonDays = 7 } = req.body;
+    const safeHorizon = Math.min(Math.max(Number(horizonDays), 1), 30);
+
+    const enqueueSummary = await enqueueDailyReminderDigests({
+      horizonDays: safeHorizon,
+      dryRun: false,
+    });
+
+    return res.json({
+      success: true,
+      queued: enqueueSummary.queuedJobs,
+      summary: enqueueSummary,
+    });
+  } catch (error) {
+    console.error('Schedule daily error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// ── POST /api/admin/notifications/test-send - Enviar notificação de teste ─────
+router.post('/notifications/test-send', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { userId, channel = 'email', title = 'Teste', message = 'Notificação de teste' } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId obrigatório' });
+    }
+
+    const { getDatabase } = require('../database');
+    const { users } = getDatabase();
+    const user = await users.findOne({ _id: userId });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    let result = { success: false, channel, details: {} };
+
+    if (channel === 'email' && user.email) {
+      const { sendReminderEmail } = require('../utils/email');
+      try {
+        await sendReminderEmail({
+          email: user.email,
+          subject: title,
+          text: message,
+        });
+        result.success = true;
+        result.details = { email: user.email };
+      } catch (err) {
+        result.error = err.message;
+      }
+    } else if (channel === 'whatsapp' && user.whatsapp) {
+      const { sendWhatsAppReminder } = require('../utils/whatsapp');
+      try {
+        await sendWhatsAppReminder({
+          whatsapp: user.whatsapp,
+          message: `${title}\n\n${message}`,
+        });
+        result.success = true;
+        result.details = { whatsapp: user.whatsapp };
+      } catch (err) {
+        result.error = err.message;
+      }
+    } else {
+      return res.status(400).json({ error: `${channel} não disponível para este usuário` });
+    }
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Test send error:', error);
+    return res.status(500).json({ error: error.message });
   }
 });
 

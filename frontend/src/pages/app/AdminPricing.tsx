@@ -14,9 +14,7 @@ export default function AdminPricing() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<PlanPrice[]>([
-    { type: 'basic', name: 'Plano Básico', price: 50.00, loading: false },
-    { type: 'premium', name: 'Plano Premium', price: 75.00, loading: false },
-    { type: 'medhub', name: 'Plano Premium+ MedHub', price: 120.00, loading: false },
+    { type: 'standard', name: 'Plano Premium', price: 19.90, loading: false },
   ]);
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
@@ -44,11 +42,7 @@ export default function AdminPricing() {
       const data = await res.json();
       const { plans: plansData } = data;
 
-      setPlans([
-        { type: 'basic', name: plansData.basic.name, price: plansData.basic.price, loading: false },
-        { type: 'premium', name: plansData.premium.name, price: plansData.premium.price, loading: false },
-        { type: 'medhub', name: plansData.premium_medhub.name, price: plansData.premium_medhub.price, loading: false },
-      ]);
+      setPlans([{ type: 'standard', name: 'Plano Premium', price: 19.90, loading: false }]);
       setErrorMessage('');
     } catch (err) {
       setErrorMessage('Erro ao carregar preços: ' + (err instanceof Error ? err.message : 'erro desconhecido'));

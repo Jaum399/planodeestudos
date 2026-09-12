@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 const { getDatabase } = require('../database');
 const { sendWhatsAppReminder } = require('../utils/whatsapp');
 const { sendReminderEmail } = require('../utils/email');
+const { sendSmsReminder, isSmsConfigured } = require('../utils/sms');
 
 const TERMINAL_STATUSES = new Set(['sent', 'failed']);
 
@@ -108,7 +109,8 @@ async function enqueueDailyReminderDigests({ horizonDays = 7, dryRun = false } =
     const targetWhatsApp = reminders.find((item) => item.alert_whatsapp)?.alert_whatsapp || user.whatsapp || '';
     const hasWhatsApp = Boolean(targetWhatsApp);
     const hasEmail = Boolean(user.email);
-    if (!hasWhatsApp && !hasEmail) {
+    const hasSms = Boolean(targetWhatsApp) && isSmsConfigured();
+    if (!hasWhatsApp && !hasEmail && !hasSms) {
       summary.skippedNoChannel += 1;
       continue;
     }
@@ -141,6 +143,7 @@ async function enqueueDailyReminderDigests({ horizonDays = 7, dryRun = false } =
         last_error: '',
         channels: {
           whatsapp: hasWhatsApp ? 'pending' : 'skipped',
+          sms: hasSms ? 'pending' : 'skipped',
           email: hasEmail ? 'pending' : 'skipped',
         },
         payload: {
@@ -176,7 +179,8 @@ async function enqueueReminderNotifications(user, reminder, source = 'jarvis') {
 
   const hasWhatsApp = Boolean(user?.whatsapp);
   const hasEmail = Boolean(user?.email);
-  if (!hasWhatsApp && !hasEmail) {
+  const hasSms = Boolean(user?.whatsapp) && isSmsConfigured();
+  if (!hasWhatsApp && !hasEmail && !hasSms) {
     return { queued: false, reason: 'no_contact_channel' };
   }
 
@@ -206,6 +210,7 @@ async function enqueueReminderNotifications(user, reminder, source = 'jarvis') {
       last_error: '',
       channels: {
         whatsapp: hasWhatsApp ? 'pending' : 'skipped',
+        sms: hasSms ? 'pending' : 'skipped',
         email: hasEmail ? 'pending' : 'skipped',
       },
       payload: {
@@ -252,7 +257,8 @@ async function enqueueDeadlineReminderNotification({
   const targetWhatsApp = recipientWhatsApp || user?.whatsapp || '';
   const hasWhatsApp = Boolean(targetWhatsApp);
   const hasEmail = Boolean(user?.email);
-  if (!hasWhatsApp && !hasEmail) {
+  const hasSms = Boolean(targetWhatsApp) && isSmsConfigured();
+  if (!hasWhatsApp && !hasEmail && !hasSms) {
     return { queued: false, reason: 'no_contact_channel' };
   }
 
@@ -288,6 +294,7 @@ async function enqueueDeadlineReminderNotification({
       last_error: '',
       channels: {
         whatsapp: hasWhatsApp ? 'pending' : 'skipped',
+        sms: hasSms ? 'pending' : 'skipped',
         email: hasEmail ? 'pending' : 'skipped',
       },
       payload: {
@@ -331,7 +338,8 @@ async function enqueueReminderCreatedNotification({
   const targetWhatsApp = recipientWhatsApp || user?.whatsapp || '';
   const hasWhatsApp = Boolean(targetWhatsApp);
   const hasEmail = Boolean(user?.email);
-  if (!hasWhatsApp && !hasEmail) {
+  const hasSms = Boolean(targetWhatsApp) && isSmsConfigured();
+  if (!hasWhatsApp && !hasEmail && !hasSms) {
     return { queued: false, reason: 'no_contact_channel' };
   }
 
@@ -365,6 +373,7 @@ async function enqueueReminderCreatedNotification({
       last_error: '',
       channels: {
         whatsapp: hasWhatsApp ? 'pending' : 'skipped',
+        sms: hasSms ? 'pending' : 'skipped',
         email: hasEmail ? 'pending' : 'skipped',
       },
       payload: {
@@ -413,12 +422,14 @@ async function processJob(job) {
   const attempts = [];
 
   const whatsappPending = job.channels.whatsapp === 'pending' && Boolean(job.payload.user_whatsapp);
+  const smsPending = job.channels.sms === 'pending' && Boolean(job.payload.user_whatsapp);
   const emailPending = job.channels.email === 'pending' && Boolean(job.payload.user_email);
 
   let whatsappSent = false;
+  let smsSent = false;
   let emailSent = false;
 
-  const [whatsAppAttempt, emailAttempt] = await Promise.all([
+  const [whatsAppAttempt, smsAttempt, emailAttempt] = await Promise.all([
     whatsappPending
       ? sendWhatsAppReminder({
           to: job.payload.user_whatsapp,
@@ -426,6 +437,16 @@ async function processJob(job) {
           reminderText: reminder.text,
           dueAt: reminder.due_at,
           source: job.payload.source || 'reminder_queue',
+        })
+          .then((result) => ({ success: Boolean(result?.sent), detail: result || {} }))
+          .catch((error) => ({ success: false, detail: { error: error.message } }))
+      : null,
+    smsPending
+      ? sendSmsReminder({
+          to: job.payload.user_whatsapp,
+          userName: job.payload.user_name,
+          reminderText: reminder.text,
+          dueAt: reminder.due_at,
         })
           .then((result) => ({ success: Boolean(result?.sent), detail: result || {} }))
           .catch((error) => ({ success: false, detail: { error: error.message } }))
@@ -442,6 +463,11 @@ async function processJob(job) {
     attempts.push({ at: now, channel: 'whatsapp', success: whatsappSent, detail: whatsAppAttempt.detail });
   }
 
+  if (smsAttempt) {
+    smsSent = smsAttempt.success;
+    attempts.push({ at: now, channel: 'sms', success: smsSent, detail: smsAttempt.detail });
+  }
+
   if (emailAttempt) {
     emailSent = emailAttempt.success;
     attempts.push({ at: now, channel: 'email', success: emailSent, detail: emailAttempt.detail });
@@ -450,13 +476,15 @@ async function processJob(job) {
   const nextAttemptCount = (job.attempt_count || 0) + 1;
   const channels = {
     whatsapp: job.channels.whatsapp,
+    sms: job.channels.sms || 'skipped',
     email: job.channels.email,
   };
 
   if (whatsappPending) channels.whatsapp = whatsappSent ? 'sent' : 'failed';
+  if (smsPending) channels.sms = smsSent ? 'sent' : 'failed';
   if (emailPending) channels.email = emailSent ? 'sent' : 'failed';
 
-  const allPendingChannelsSent = (!whatsappPending || whatsappSent) && (!emailPending || emailSent);
+  const allPendingChannelsSent = (!whatsappPending || whatsappSent) && (!smsPending || smsSent) && (!emailPending || emailSent);
 
   if (allPendingChannelsSent) {
     await notificationJobs.updateOne(
@@ -506,6 +534,7 @@ async function processJob(job) {
         next_attempt_at: nextAttemptAt,
         channels: {
           whatsapp: whatsappPending ? (whatsappSent ? 'sent' : 'pending') : channels.whatsapp,
+          sms: smsPending ? (smsSent ? 'sent' : 'pending') : channels.sms,
           email: emailPending ? (emailSent ? 'sent' : 'pending') : channels.email,
         },
         last_error: 'delivery_failed',

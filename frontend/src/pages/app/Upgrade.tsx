@@ -6,7 +6,7 @@ import { authApi, paymentApi } from '../../services/api';
 import PublicPreferenceControls from '../../components/PublicPreferenceControls';
 import { formatCpfOrCnpj, onlyDigits, safeReadJson } from '../../utils/formAutomation';
 
-type PlanType = 'standard' | 'premium' | 'premium_medhub';
+type PlanType = 'premium';
 
 interface Plan {
   id: PlanType;
@@ -21,48 +21,18 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id: 'standard',
-    name: 'Básico',
-    price: '50,00',
-    displayPrice: 50,
-    description: 'Perfeito para começar',
-    features: [
-      'Planner Kanban',
-      'Flashcards com revisão espaçada (SM-2)',
-      'Até 500 cards',
-      'Análises básicas',
-      'Suporte por email',
-    ],
-  },
-  {
     id: 'premium',
-    name: 'Premium',
-    price: '50,00',
-    displayPrice: 50,
-    description: 'Mais econômico',
+    name: 'Plano Premium',
+    price: '19,90',
+    displayPrice: 19.90,
+    description: 'Acesso completo ao Plano de Estudos',
     featured: true,
     features: [
-      'Tudo do Básico, plus:',
-      'Cards ilimitados',
-      'Simulador cognitivo com IA',
-      'Cronograma automático personalizado',
-      'Análises e estatísticas detalhadas',
-      'Suporte prioritário',
-    ],
-  },
-  {
-    id: 'premium_medhub',
-    name: 'Premium+',
-    price: '50,00',
-    displayPrice: 50,
-    description: 'Completo com MedHub',
-    features: [
-      'Tudo do Premium, plus:',
-      'Acesso ao Centro Médico',
-      'Comunidade MedHub',
-      'Recursos avançados de coaching',
-      'Integração com especialistas',
-      'Prioridade máxima de suporte',
+      'Flashcards ilimitados e por PDF',
+      'Planner e cronograma de estudos',
+      'Análises de desempenho',
+      'Assistente IA e resumos',
+      'Suporte por email',
     ],
   },
 ];
@@ -114,7 +84,7 @@ export default function Upgrade() {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('premium');
+  const [selectedPlan] = useState<PlanType>('premium');
   const [error, setError] = useState('');
   const [billingDocument, setBillingDocument] = useState(() => {
     const fromUser = user?.billingDocument || '';
@@ -223,7 +193,7 @@ export default function Upgrade() {
       </div>
 
       {/* Pricing cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 max-w-md mx-auto gap-4 mb-8">
         {PLANS.map((plan) => (
           <button
             key={plan.id}

@@ -1,4 +1,4 @@
-const DEFAULT_WHATSAPP_SENDER_NUMBER = '34641296849';
+const DEFAULT_WHATSAPP_SENDER_NUMBER = '5565981307806';
 
 function envValue(name, fallback = '') {
   const rawValue = process.env[name];

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Clock, CheckCircle, XCircle, TrendingUp, BarChart3, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { getCourseProfile } from '../../utils/courseProfiles';
 
 interface Question {
   id: string;
@@ -34,11 +35,12 @@ type ExamPhase = 'basico' | 'clinico' | 'internato' | 'residencia';
 export default function MockExams() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const courseProfile = useMemo(() => getCourseProfile(user?.area, user?.goal), [user?.area, user?.goal]);
 
   const [mode, setMode] = useState<'builder' | 'exam' | 'results'>('builder');
   const [examConfig, setExamConfig] = useState({
     name: '',
-    subject: 'Medicina',
+    subject: '',
     phase: 'clinico' as ExamPhase,
     timeLimit: 60,
     questionCount: 20,
@@ -57,11 +59,17 @@ export default function MockExams() {
 
   // Fetch available questions
   useEffect(() => {
+    if (courseProfile.subjects.length > 0 && !examConfig.subject) {
+      setExamConfig((current) => ({ ...current, subject: courseProfile.subjects[0] }));
+    }
+  }, [courseProfile.subjects, examConfig.subject]);
+
+  useEffect(() => {
     if (mode === 'builder') {
       fetchAvailableQuestions();
       fetchExamHistory();
     }
-  }, [mode]);
+  }, [mode, examConfig.subject, examConfig.phase]);
 
   // Timer for exam
   useEffect(() => {

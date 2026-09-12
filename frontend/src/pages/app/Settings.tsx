@@ -451,9 +451,7 @@ export default function Settings() {
           <div className="flex justify-between">
             <span className="text-gray-500">{t('settings_plan_current')}</span>
             <span className="text-primary-300 font-semibold">
-              {user?.plan === 'basic' ? 'Plano Básico - R$50,00/mês'
-               : user?.plan === 'premium' ? 'Premium - R$49,90/mês'
-               : user?.plan === 'premium_medhub' ? 'Premium+ - R$89,90/mês'
+              {user?.plan !== 'free' ? 'Plano Premium - R$19,90/mês'
                : 'Plano Gratuito'}
             </span>
           </div>

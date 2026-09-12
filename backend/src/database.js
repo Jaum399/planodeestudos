@@ -169,7 +169,7 @@ const sessionSchema = new mongoose.Schema({
 
 const notificationAttemptSchema = new mongoose.Schema({
   at: { type: String, required: true },
-  channel: { type: String, enum: ['whatsapp', 'email'], required: true },
+  channel: { type: String, enum: ['whatsapp', 'sms', 'email'], required: true },
   success: { type: Boolean, required: true },
   detail: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { _id: false });
@@ -190,6 +190,7 @@ const notificationJobSchema = new mongoose.Schema({
   last_error: { type: String, default: '' },
   channels: {
     whatsapp: { type: String, enum: ['pending', 'sent', 'failed', 'skipped'], default: 'pending' },
+    sms: { type: String, enum: ['pending', 'sent', 'failed', 'skipped'], default: 'pending' },
     email: { type: String, enum: ['pending', 'sent', 'failed', 'skipped'], default: 'pending' },
   },
   payload: {
@@ -230,8 +231,9 @@ deadlineReminderSchema.index({ user_id: 1, due_at: 1 });
 
 const questionBankSchema = new mongoose.Schema({
   _id: { type: String, required: true },
+  course: { type: String, default: 'medicina', index: true },
   subject: { type: String, required: true },
-  phase: { type: String, enum: ['basico', 'clinico', 'internato', 'residencia'], required: true },
+  phase: { type: String, enum: ['geral', 'basico', 'clinico', 'internato', 'residencia'], required: true },
   statement: { type: String, required: true },
   options: { type: [String], default: [] },
   correct_index: { type: Number, required: true },

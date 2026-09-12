@@ -95,7 +95,7 @@ router.get('/plans', (_req, res) => {
       {
         id: 'premium',
         name: 'Premium',
-        monthlyPrice: 29.9,
+        monthlyPrice: 19.90,
         features: [
           'Planner completo',
           'Flashcards com revisao',
