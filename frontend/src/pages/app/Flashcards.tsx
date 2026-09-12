@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, Clock3, Download, FileUp, Plus, Target, TrendingUp, X, Sparkles, Upload } from 'lucide-react';
+import { BookOpen, Clock3, Download, FileUp, Plus, Target, TrendingUp, X, Sparkles, Upload, Trash2 } from 'lucide-react';
 import { flashcardDecksApi, flashcardsApi, goalsApi, pdfApi, studyToolsApi } from '../../services/api';
 import GoalTracker from '../../components/GoalTracker';
 import BatchFlashcardModal from '../../components/BatchFlashcardModal';
@@ -80,6 +80,7 @@ export default function Flashcards() {
   const [deckCards, setDeckCards] = useState<Flashcard[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [cardDeleting, setCardDeleting] = useState(false);
 
   const [decks, setDecks] = useState<FlashcardDeck[]>([]);
   const [uncategorizedCount, setUncategorizedCount] = useState(0);
@@ -244,20 +245,22 @@ export default function Flashcards() {
     }
   };
 
-  const handleDeleteCard = async () => {
-    if (!currentCard || !confirm('Tem certeza que deseja deletar este flashcard? Esta ação não pode ser desfeita.')) return;
+  const handleDeleteCurrentCard = async () => {
+    if (!currentCard || cardDeleting) return;
+    if (!window.confirm('Excluir este flashcard? Essa ação não pode ser desfeita.')) return;
+
+    setCardDeleting(true);
     try {
       await flashcardsApi.delete(currentCard.id);
-      // Remove card from list and move to next
-      const newCards = deckCards.filter((card) => card.id !== currentCard.id);
-      setDeckCards(newCards);
-      if (currentIdx >= newCards.length && currentIdx > 0) {
-        setCurrentIdx(currentIdx - 1);
-      }
-      // Reload progress after deletion
+      const remainingCards = deckCards.filter((card) => card.id !== currentCard.id);
+      setDeckCards(remainingCards);
+      setCurrentIdx((index) => Math.min(index, Math.max(remainingCards.length - 1, 0)));
+      setFlipped(false);
       await loadDecksAndProgress();
-    } catch (error) {
-      alert('Erro ao deletar flashcard. Tente novamente.');
+    } catch {
+      window.alert('Não foi possível excluir este flashcard. Tente novamente.');
+    } finally {
+      setCardDeleting(false);
     }
   };
 
@@ -316,14 +319,19 @@ export default function Flashcards() {
     let extractedText = '';
     let targetDeckId = material.deck_id;
     if (material.material_type === 'video' && material.file) {
-      if (!material.file.type.startsWith('video/')) throw new Error('Selecione um arquivo de vídeo válido.');
+      const videoMimeType = material.file.type || (
+        /\.mp4$/i.test(material.file.name) ? 'video/mp4' :
+          /\.webm$/i.test(material.file.name) ? 'video/webm' :
+            /\.mov$/i.test(material.file.name) ? 'video/quicktime' : ''
+      );
+      if (!videoMimeType.startsWith('video/')) throw new Error('Selecione um arquivo de vídeo válido.');
       if (material.file.size > 3 * 1024 * 1024) {
         throw new Error('Vídeos acima de 3 MB precisam de uma transcrição colada no campo de conteúdo.');
       }
       const dataUrl = await readFileAsDataUrl(material.file);
       const { data: transcription } = await studyToolsApi.transcribeVideo({
         file_name: material.file.name,
-        mime_type: material.file.type,
+        mime_type: videoMimeType,
         data_url: dataUrl,
       });
       extractedText = String(transcription?.text || '');
@@ -811,6 +819,15 @@ export default function Flashcards() {
           >
             JSON
           </button>
+          <button
+            className="btn-secondary p-2 text-rose-300 hover:text-rose-200 disabled:opacity-40"
+            onClick={handleDeleteCurrentCard}
+            disabled={cardDeleting || deckCards.length === 0}
+            aria-label="Excluir flashcard atual"
+            title="Excluir flashcard atual"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
         <span className="w-5 h-5 rounded-full" style={{ background: selectedDeck.color }} />
       </div>
@@ -836,17 +853,6 @@ export default function Flashcards() {
             <button className="btn-secondary" onClick={() => handleRate(1)}>Difícil</button>
             <button className="btn-secondary" onClick={() => handleRate(2)}>Médio</button>
             <button className="btn-secondary" onClick={() => handleRate(3)}>Fácil</button>
-          </div>
-
-          <div className="flex justify-center gap-2 mt-4">
-            <button
-              className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors border border-red-500/30"
-              onClick={handleDeleteCard}
-              title="Deletar este flashcard"
-            >
-              <X size={16} />
-              Deletar
-            </button>
           </div>
         </div>
       ) : (

@@ -254,7 +254,8 @@ router.post('/flashcards/generate', async (req, res) => {
 router.post('/video/transcribe', async (req, res) => {
   try {
     const { file_name, mime_type, data_url } = req.body || {};
-    if (!file_name || !/^video\//i.test(String(mime_type || '')) || !String(data_url || '').includes(',')) {
+    const inferredVideo = /^video\//i.test(String(mime_type || '')) || /\.(mp4|webm|mov|mkv|avi)$/i.test(String(file_name || ''));
+    if (!file_name || !inferredVideo || !String(data_url || '').includes(',')) {
       return res.status(400).json({ error: 'Envie um arquivo de vídeo válido.' });
     }
     const rawBase64 = String(data_url).split(',')[1] || '';

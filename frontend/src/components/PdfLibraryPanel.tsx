@@ -151,7 +151,8 @@ export default function PdfLibraryPanel() {
   const handleUploadPdf = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') {
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
       setPdfError('Selecione um arquivo PDF valido.');
       e.target.value = '';
       return;
@@ -323,7 +324,7 @@ export default function PdfLibraryPanel() {
         <label className="btn-primary text-sm justify-center cursor-pointer w-full">
           <input
             type="file"
-            accept="application/pdf"
+            accept="application/pdf,.pdf"
             onChange={handleUploadPdf}
             className="hidden"
             disabled={pdfBusy}

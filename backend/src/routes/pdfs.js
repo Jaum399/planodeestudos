@@ -26,6 +26,10 @@ function isPdfDataUrl(value) {
   return /^data:application\/pdf;base64,/i.test(String(value || ''));
 }
 
+function isPdfFile(fileName, mimeType) {
+  return String(mimeType || '').toLowerCase() === 'application/pdf' || /\.pdf$/i.test(String(fileName || ''));
+}
+
 function normalizeChunkData(value) {
   return String(value || '').trim().replace(/^data:application\/pdf;base64,/i, '');
 }
@@ -129,7 +133,7 @@ router.post('/uploads/init', async (req, res) => {
       return res.status(400).json({ error: 'Título do PDF é obrigatório' });
     }
 
-    if (mime_type !== 'application/pdf') {
+    if (!isPdfFile(file_name, mime_type)) {
       return res.status(400).json({ error: 'Envie um arquivo PDF válido' });
     }
 
@@ -265,7 +269,7 @@ router.post('/documents', async (req, res) => {
       return res.status(400).json({ error: 'Título do PDF é obrigatório' });
     }
 
-    if (!isPdfDataUrl(data_url) || mime_type !== 'application/pdf') {
+    if (!isPdfDataUrl(data_url) || !isPdfFile(file_name, mime_type)) {
       return res.status(400).json({ error: 'Envie um arquivo PDF válido' });
     }
 
