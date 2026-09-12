@@ -244,6 +244,23 @@ export default function Flashcards() {
     }
   };
 
+  const handleDeleteCard = async () => {
+    if (!currentCard || !confirm('Tem certeza que deseja deletar este flashcard? Esta ação não pode ser desfeita.')) return;
+    try {
+      await flashcardsApi.delete(currentCard.id);
+      // Remove card from list and move to next
+      const newCards = deckCards.filter((card) => card.id !== currentCard.id);
+      setDeckCards(newCards);
+      if (currentIdx >= newCards.length && currentIdx > 0) {
+        setCurrentIdx(currentIdx - 1);
+      }
+      // Reload progress after deletion
+      await loadDecksAndProgress();
+    } catch (error) {
+      alert('Erro ao deletar flashcard. Tente novamente.');
+    }
+  };
+
   const handleCreateDeck = async () => {
     if (!deckForm.name.trim()) return;
     setDeckLoading(true);
@@ -819,6 +836,17 @@ export default function Flashcards() {
             <button className="btn-secondary" onClick={() => handleRate(1)}>Difícil</button>
             <button className="btn-secondary" onClick={() => handleRate(2)}>Médio</button>
             <button className="btn-secondary" onClick={() => handleRate(3)}>Fácil</button>
+          </div>
+
+          <div className="flex justify-center gap-2 mt-4">
+            <button
+              className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors border border-red-500/30"
+              onClick={handleDeleteCard}
+              title="Deletar este flashcard"
+            >
+              <X size={16} />
+              Deletar
+            </button>
           </div>
         </div>
       ) : (
