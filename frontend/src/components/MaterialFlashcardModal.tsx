@@ -72,6 +72,15 @@ export default function MaterialFlashcardModal({ isOpen, onClose, onGenerate, de
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const finalTheme = theme.trim() || materialName.trim();
+    if (materialType === 'pdf' && !selectedFile) {
+      setError('Selecione um arquivo PDF para criar cards baseados nele.');
+      return;
+    }
+    const canAutoTranscribeVideo = materialType === 'video' && selectedFile && selectedFile.size <= 3 * 1024 * 1024;
+    if (materialType === 'video' && sourceText.trim().length < 40 && !canAutoTranscribeVideo) {
+      setError('Para criar cards de um vídeo, envie a transcrição ou cole pelo menos 40 caracteres do conteúdo.');
+      return;
+    }
     if (!finalTheme && sourceText.trim().length < 40) {
       setError('Informe o tema/material ou cole pelo menos 40 caracteres da transcricao ou do PDF.');
       return;
@@ -108,9 +117,9 @@ export default function MaterialFlashcardModal({ isOpen, onClose, onGenerate, de
 
         <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-1">
           <Sparkles size={18} className="text-yellow-400" />
-          Criar cards de um material
+          Importar PDF e criar flashcards
         </h3>
-        <p className="text-gray-400 text-sm mb-5">Selecione um PDF ou video e forneca o texto extraido, a transcricao ou um tema para a IA.</p>
+        <p className="text-gray-400 text-sm mb-5">Selecione um PDF para extrair o conteúdo e criar um deck novo automaticamente. Vídeos pequenos podem ser transcritos pela IA.</p>
 
         {result ? (
           <div className="space-y-4">
@@ -123,7 +132,7 @@ export default function MaterialFlashcardModal({ isOpen, onClose, onGenerate, de
               <button
                 type="button"
                 onClick={() => setMaterialType('pdf')}
-                className={`rounded-xl border p-3 text-left ${materialType === 'pdf' ? 'border-primary-400 bg-primary-500/15' : 'border-white/10 bg-white/5'}`}
+                className={`rounded-xl border p-3 text-left transition-all ${materialType === 'pdf' ? 'border-primary-400 bg-primary-500/15' : 'border-white/10 bg-white/5 hover:border-white/20'}`}
               >
                 <FileUp size={17} className="text-primary-300 mb-1" />
                 <span className="block text-white text-sm font-medium">PDF</span>
@@ -132,21 +141,26 @@ export default function MaterialFlashcardModal({ isOpen, onClose, onGenerate, de
               <button
                 type="button"
                 onClick={() => setMaterialType('video')}
-                className={`rounded-xl border p-3 text-left ${materialType === 'video' ? 'border-primary-400 bg-primary-500/15' : 'border-white/10 bg-white/5'}`}
+                className={`rounded-xl border p-3 text-left transition-all ${materialType === 'video' ? 'border-primary-400 bg-primary-500/15' : 'border-white/10 bg-white/5 hover:border-white/20'}`}
               >
                 <Sparkles size={17} className="text-primary-300 mb-1" />
-                <span className="block text-white text-sm font-medium">Video</span>
-                <span className="text-gray-400 text-xs">Aula ou revisao</span>
+                <span className="block text-white text-sm font-medium">Vídeo</span>
+                <span className="text-gray-400 text-xs">Aula ou revisão</span>
               </button>
             </div>
 
-            <input
-              type="file"
-              accept={materialType === 'pdf' ? 'application/pdf,.pdf' : 'video/*'}
-              className="input-field text-sm"
-              onChange={(event) => handleFile(event.target.files?.[0])}
-            />
-            {selectedFileName && <p className="text-xs text-primary-300 truncate">Arquivo selecionado: {selectedFileName}</p>}
+            <div className="relative">
+              <label className="block text-xs font-semibold text-gray-300 mb-2">
+                {materialType === 'pdf' ? 'Selecione um arquivo PDF' : 'Selecione um vídeo (até 3 MB) ou cole a transcrição'}
+              </label>
+              <input
+                type="file"
+                accept={materialType === 'pdf' ? 'application/pdf,.pdf' : 'video/*'}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white cursor-pointer file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-primary-500/30 file:text-primary-300 file:cursor-pointer hover:border-white/20 transition-colors"
+                onChange={(event) => handleFile(event.target.files?.[0])}
+              />
+              {selectedFileName && <p className="text-xs text-primary-300 mt-2 truncate">✓ Arquivo selecionado: {selectedFileName}</p>}
+            </div>
 
             <div className="grid md:grid-cols-2 gap-3">
               <input className="input-field" placeholder="Nome ou tema do material" value={materialName} onChange={(event) => setMaterialName(event.target.value)} />

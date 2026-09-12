@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, Clock3, Download, Plus, Target, TrendingUp, X, Sparkles, Upload } from 'lucide-react';
+import { BookOpen, Clock3, Download, FileUp, Plus, Target, TrendingUp, X, Sparkles, Upload } from 'lucide-react';
 import { flashcardDecksApi, flashcardsApi, goalsApi, pdfApi, studyToolsApi } from '../../services/api';
 import GoalTracker from '../../components/GoalTracker';
 import BatchFlashcardModal from '../../components/BatchFlashcardModal';
@@ -297,6 +297,20 @@ export default function Flashcards() {
 
   const handleGenerateFromMaterial = async (material: MaterialGenerationData) => {
     let extractedText = '';
+    let targetDeckId = material.deck_id;
+    if (material.material_type === 'video' && material.file) {
+      if (!material.file.type.startsWith('video/')) throw new Error('Selecione um arquivo de vídeo válido.');
+      if (material.file.size > 3 * 1024 * 1024) {
+        throw new Error('Vídeos acima de 3 MB precisam de uma transcrição colada no campo de conteúdo.');
+      }
+      const dataUrl = await readFileAsDataUrl(material.file);
+      const { data: transcription } = await studyToolsApi.transcribeVideo({
+        file_name: material.file.name,
+        mime_type: material.file.type,
+        data_url: dataUrl,
+      });
+      extractedText = String(transcription?.text || '');
+    }
     if (material.material_type === 'pdf' && material.file) {
       if (material.file.type !== 'application/pdf' && !/\.pdf$/i.test(material.file.name)) {
         throw new Error('Selecione um arquivo PDF válido.');
@@ -339,6 +353,16 @@ export default function Flashcards() {
       if (!documentId) throw new Error('Não foi possível salvar o PDF para análise.');
       const { data: extracted } = await pdfApi.extractText(documentId);
       extractedText = String(extracted?.text || '');
+
+      if (!targetDeckId) {
+        const deckName = `PDF - ${(material.material_name || material.file.name.replace(/\.pdf$/i, '')).trim()}`.slice(0, 40);
+        const { data: deckData } = await flashcardDecksApi.create({
+          name: deckName,
+          description: 'Deck criado automaticamente a partir de um PDF importado.',
+          color: '#dc2626',
+        });
+        targetDeckId = String(deckData?.deck?.id || deckData?.deck?._id || '');
+      }
     }
 
     const materialContext = [
@@ -354,7 +378,7 @@ export default function Flashcards() {
       quantity: material.quantity,
       subject: material.subject,
       source_text: materialContext || undefined,
-      deck_id: material.deck_id,
+      deck_id: targetDeckId,
     });
     await loadDecksAndProgress();
     return Number(data?.created || 0);
@@ -477,39 +501,48 @@ export default function Flashcards() {
         {dailyGoal && <GoalTracker goal={dailyGoal} todayProgress={todayProgress} onUpdate={loadDecksAndProgress} />}
 
         <section className="card-glass rounded-2xl p-5 border border-white/10">
-          <div className="flex items-center justify-between mb-4">
+          <div className="space-y-4">
             <div>
               <h2 className="text-xl font-bold text-white">Meus Decks</h2>
               <p className="text-gray-400 text-sm">Escolha um deck para abrir seus flashcards</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
-                className="btn-primary py-2 px-3 inline-flex items-center gap-2 text-sm"
+                className="btn-primary py-2 px-3 inline-flex items-center justify-center gap-2 text-sm whitespace-nowrap"
                 onClick={() => setShowAIGeneration(true)}
+                title="Gerar flashcards com IA"
               >
                 <Sparkles size={14} />
-                Gerar com IA
+                <span className="hidden sm:inline">Gerar com IA</span>
+                <span className="sm:hidden">IA</span>
               </button>
               <button
-                className="btn-primary py-2 px-3 inline-flex items-center gap-2 text-sm"
+                className="btn-primary py-2 px-3 inline-flex items-center justify-center gap-2 text-sm whitespace-nowrap"
                 onClick={() => setShowMaterialGeneration(true)}
+                aria-label="Importar PDF e criar flashcards"
+                title="Importar PDF"
               >
-                <Upload size={14} />
-                PDF ou vídeo
+                <FileUp size={14} />
+                <span className="hidden sm:inline">PDF</span>
+                <span className="sm:hidden">PDF</span>
               </button>
               <button
-                className="btn-primary py-2 px-3 inline-flex items-center gap-2 text-sm"
+                className="btn-primary py-2 px-3 inline-flex items-center justify-center gap-2 text-sm whitespace-nowrap"
                 onClick={() => setShowBatchCreation(true)}
+                title="Importar lote de flashcards"
               >
                 <Upload size={14} />
-                Importar Lote
+                <span className="hidden sm:inline">Lote</span>
+                <span className="sm:hidden">+</span>
               </button>
               <button
-                className="btn-primary py-2 px-3 inline-flex items-center gap-2"
+                className="btn-primary py-2 px-3 inline-flex items-center justify-center gap-2 text-sm whitespace-nowrap"
                 onClick={() => setShowCreateDeck(true)}
+                title="Criar novo deck"
               >
                 <Plus size={14} />
-                Novo deck
+                <span className="hidden sm:inline">Novo Deck</span>
+                <span className="sm:hidden">New</span>
               </button>
             </div>
           </div>

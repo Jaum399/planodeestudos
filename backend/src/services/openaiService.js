@@ -1,8 +1,8 @@
 const axios = require('axios');
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
-const TIMEOUT_MS = 12000;
-const MODEL_ID = 'gpt-4o-mini'; // Faster, cost-effective model with good quality
+const TIMEOUT_MS = 30000;
+const MODEL_ID = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 
 function isAvailable() {
   return Boolean(process.env.OPENAI_API_KEY);
@@ -45,65 +45,40 @@ async function callOpenAI(prompt, systemInstruction = null) {
 
 async function generateFlashcardsWithAI({ theme, subject, quantity, sourceText }) {
   const contextBlock = sourceText
-    ? `Base as perguntas principalmente no seguinte conteúdo:\n\n${sourceText.slice(0, 3000)}\n\n`
+    ? `Use exclusivamente as informações relevantes do material abaixo. Não invente fatos e não misture com outra área:\n\n${sourceText.slice(0, 12000)}\n\n`
     : '';
 
-  const systemInstruction = `Você é um especialista em criar flashcards para estudo médico de ALTÍSSIMA ESPECIFICIDADE.
-Gere respostas NUNCA genéricas: sempre com nomes específicos, números exatos, critérios precisos.
-Cada resposta deve ser válida em prova de concurso médico.`;
+  const systemInstruction = `🎓 EXPERT EM FLASHCARDS TÉCNICOS DE ALTÍSSIMA QUALIDADE
+Seu trabalho: Criar flashcards de MÁXIMA ESPECIFICIDADE e EXTREMA QUALIDADE para ${subject}.
 
-  const prompt = `${contextBlock}Gere exatamente ${quantity} flashcards de estudo de ALTÍSSIMA ESPECIFICIDADE sobre "${theme}" para a matéria de ${subject}.
+RESTRIÇÕES CRÍTICAS:
+✗ NUNCA: Perguntas genéricas ("O que é...", "Explique...", "Fale sobre...")
+✗ NUNCA: Respostas que se aplicam a múltiplos temas
+✓ SEMPRE: Números, percentuais, valores, critérios específicos
+✓ SEMPRE: Perguntas que exigem PROFUNDO CONHECIMENTO técnico
+✓ SEMPRE: Aplicação prática e contexto específico real
+✓ SEMPRE: Respostas precisas, técnicas e verificáveis`;
 
-Retorne SOMENTE um array JSON válido, sem texto antes ou depois, sem markdown, sem \`\`\`:
+  const prompt = `${contextBlock}Gere EXATAMENTE ${quantity} flashcards EXTREMAMENTE ESPECÍFICOS para "${theme}" em "${subject}".
+
+PADRÃO RIGOROSO:
+1. ESPECIFICIDADE ULTRA-ALTA: Pergunta tão específica que 80% não consegue responder
+2. TÉCNICO: Números, valores, percentuais, datas, protocolos, critérios diagnósticos
+3. ZERO GENÉRICOS: Proibido "O que é", "Como funciona", "Explique"
+4. FOCO PRÁTICO: "Em qual situação...", "Qual é o valor...", "Quando se aplica..."
+5. VERIFICÁVEL: Cada resposta pode ser confirmada em fontes técnicas
+6. PROFUNDIDADE: Conhecimento especialista, não básico
+
+❌ PÉSSIMO: P: "O que é enzima?" R: "É uma molécula que catalisa reações"
+✅ EXCELENTE: P: "Qual é o Km da hexoquinase para glicose?" R: "~0,1 mM, permitindo saturação fisiológica em ~5 mM"
+
+Retorne APENAS um array JSON válido (sem markdown):
 [
-  {"question": "pergunta objetiva aqui", "answer": "resposta completa e concisa aqui"},
+  {"question": "Pergunta MUITO específica e técnica", "answer": "Resposta com números/critérios exatos"},
   ...
 ]
 
-REGRAS DE ESPECIFICIDADE OBRIGATÓRIAS:
-1. NOMEAÇÃO EXATA: Lista NOMES ESPECÍFICOS, não genéricos
-   ❌ Não: "Quais são as artérias?"
-   ✅ Sim: "Qual é a origem da artéria coronária descendente anterior e qual vaso ela origina-se?"
-
-2. NÚMEROS E VALORES CONCRETOS
-   ❌ Não: "Qual é o valor normal de glicemia?"
-   ✅ Sim: "Qual é o valor de glicemia em jejum que define diabetes mellitus (OMS 2010)? [≥126 mg/dL]"
-
-3. ESTRUTURAS ANATÔMICAS PRECISAS
-   ❌ Não: "Quais estruturas compõem o coração?"
-   ✅ Sim: "Cite as 4 veias do coração: [Veia cava superior, veia cava inferior, veia coronária, seio coronário]"
-
-4. CRITÉRIOS DIAGNÓSTICOS ESPECÍFICOS
-   ❌ Não: "Como diagnosticar sepse?"
-   ✅ Sim: "Qual é o critério qSOFA para sepse? [≥2 de: rebaixamento mental, PAS ≤100, FR ≥22]"
-
-5. SEQUÊNCIAS E PASSOS EXATOS
-   ❌ Não: "Qual é o processo de coagulação?"
-   ✅ Sim: "Cite em ordem os passos da cascata de coagulação (primária → secundária → terciária)"
-
-6. DIFERENÇAS CLÍNICAS PRECISAS
-   ❌ Não: "Qual a diferença entre asma e DPOC?"
-   ✅ Sim: "Qual é a principal diferença: reversibilidade em asma vs DPOC irreversível, medida por VEF1 pós-broncodilatador"
-
-ESTRUTURA DE RESPOSTA (máximo 3 frases):
-Frase 1: Resposta direta com número/nome específico
-Frase 2: Contexto clínico OU critério diferencial
-Frase 3: Implicação prática OU validação de prova
-
-EXEMPLOS MÉDICOS DE ALTA QUALIDADE:
-Q: "Quais são as veias do coração?"
-A: "4 veias principais: veia cava superior, veia cava inferior, 4 veias pulmonares e seio coronário. O seio coronário drena o sangue do próprio miocárdio. Memorizar localização: 2 cavas chegam no átrio direito, 4 pulmonares no esquerdo, coronária é própria do ventrículo."
-
-Q: "Qual critério define hipertensão arterial?"
-A: "PAS ≥140 mmHg E/OU PAD ≥90 mmHg em ≥3 ocasiões em consultório (ou média de MAPA). Pré-hipertensão é 120-139/80-89. Importante: medição em repouso 5 min, sem cafeína 30 min antes."
-
-Q: "Cite os critérios de SIRS (resposta inflamatória sistêmica)"
-A: "4 critérios (≥2 presentes): Temp >38°C ou <36°C, FC >90, RR >20 ou PaCO2 <32, Leucócitos >11000 ou <4000. SIRS + infecção = sepse. SIRS isolado pode ter origem não-infecciosa (queimadura, cirurgia)."
-
-- Use português brasileiro com terminologia médica EXATA
-- PROÍBIDO usar expressões vagas: "pode", "geralmente", "muitas vezes", "frequentemente"
-- Priorize: NOMES, NÚMEROS, CRITÉRIOS, EVIDÊNCIAS
-- Cada resposta deve ser válida em prova de concurso médico`;
+Português Brasil. Qualidade técnica acima de tudo.`;
 
   const raw = await callOpenAI(prompt, systemInstruction);
 

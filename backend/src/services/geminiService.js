@@ -1,8 +1,8 @@
 const axios = require('axios');
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL_ID = 'gemini-1.5-flash'; // Fast, free tier available
-const TIMEOUT_MS = 12000;
+const MODEL_ID = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const TIMEOUT_MS = 30000;
 
 function isAvailable() {
   return Boolean(process.env.GOOGLE_GEMINI_API_KEY);
@@ -35,6 +35,7 @@ async function callGemini(prompt, systemInstruction = null) {
           maxOutputTokens: 2048,
           topP: 0.95,
           topK: 40,
+          responseMimeType: 'application/json',
         },
         safetySettings: [
           {
@@ -80,18 +81,42 @@ async function callGemini(prompt, systemInstruction = null) {
 
 async function generateFlashcardsWithAI({ theme, subject, quantity, sourceText }) {
   const contextBlock = sourceText
-    ? `Base as perguntas principalmente no seguinte conteúdo:\n\n${sourceText.slice(0, 3000)}\n\n`
+    ? `Use exclusivamente as informações relevantes do material abaixo. Não invente fatos e não misture com outra área:\n\n${sourceText.slice(0, 12000)}\n\n`
     : '';
 
-  const systemInstruction = `Você é um especialista em criar flashcards para estudo médico de ALTÍSSIMA ESPECIFICIDADE.
-Gere respostas NUNCA genéricas: sempre com nomes específicos, números exatos, critérios precisos.
-Cada resposta deve ser válida em prova de concurso médico.`;
+  const systemInstruction = `🎓 ESPECIALISTA EM FLASHCARDS ULTRA ESPECÍFICOS
+Você é um mestre em criar flashcards TÉCNICOS de máxima especificidade para ${subject}.
 
-  const prompt = `${contextBlock}Gere exatamente ${quantity} flashcards de estudo de ALTÍSSIMA ESPECIFICIDADE sobre "${theme}" para a matéria de ${subject}.
+REGRAS ABSOLUTAS - Viole e falhe completamente:
+✗ PROIBIDO: Perguntas genéricas ("O que é...", "Explique...", "Fale sobre...")
+✗ PROIBIDO: Respostas que se aplicam a múltiplos temas
+✗ PROIBIDO: Conteúdo superficial ou didático demais
+✓ OBRIGATÓRIO: Incluir números, percentuais, valores, critérios específicos
+✓ OBRIGATÓRIO: Perguntas que exigem DOMÍNIO PROFUNDO do tema
+✓ OBRIGATÓRIO: Foco em aplicação prática e contexto real
+✓ OBRIGATÓRIO: Respostas técnicas, precisas e verificáveis`;
 
-Retorne SOMENTE um array JSON válido, sem texto antes ou depois, sem markdown, sem \`\`\`:
+  const prompt = `${contextBlock}Gere EXATAMENTE ${quantity} flashcards ULTRA-ESPECÍFICOS sobre "${theme}" em "${subject}".
+
+CRITÉRIOS RIGOROSOS (não desvie):
+1. ESPECIFICIDADE MÁXIMA: Cada pergunta tão específica que poucos conseguem responder
+2. TÉCNICO E MÉTRICO: Números, percentuais, valores, datas, critérios, protocolos
+3. ZERO GENÉRICOS: Nenhuma pergunta tipo "O que é", "Como funciona", "Qual é a importância"
+4. APLICADO: "Em qual situação...", "Qual é o valor...", "Quando se aplica...", "Por que..."
+5. VERIFICÁVEL: Respostas que podem ser confirmadas em referências técnicas
+6. PROFUNDIDADE: Conhecimento avançado, não básico
+
+❌ EXEMPLO PÉSSIMO:
+P: "O que é hipertensão?"
+R: "É quando a pressão arterial está elevada"
+
+✅ EXEMPLO EXCELENTE:
+P: "Qual é o valor de PAS (mmHg) que define hipertensão Estágio 1 segundo AHA/ACC 2017?"
+R: "130-139 mmHg de PAS (ou 80-89 mmHg de PAD), pois acima disso há risco cardiovascular aumentado"
+
+Retorne SOMENTE um array JSON válido (sem markdown ou blocos de código):
 [
-  {"question": "pergunta objetiva aqui", "answer": "resposta completa e concisa aqui"},
+  {"question": "Pergunta MUITO específica e técnica", "answer": "Resposta com números/valores/critérios específicos"},
   ...
 ]`;
 
@@ -106,6 +131,36 @@ Retorne SOMENTE um array JSON válido, sem texto antes ou depois, sem markdown, 
     console.error('Error generating flashcards:', error.message);
     throw error;
   }
+}
+
+async function transcribeVideoWithAI({ mimeType, dataUrl }) {
+  if (!isAvailable()) throw new Error('GEMINI_NOT_CONFIGURED');
+  const base64Data = String(dataUrl || '').split(',')[1] || '';
+  if (!base64Data || !/^video\//i.test(String(mimeType || ''))) {
+    throw new Error('VIDEO_DATA_INVALID');
+  }
+
+  const response = await axios.post(
+    `${GEMINI_API_URL}/${MODEL_ID}:generateContent`,
+    {
+      contents: [{ parts: [
+        { text: 'Transcreva este vídeo em português brasileiro. Preserve os termos técnicos, fórmulas e nomes próprios. Retorne somente a transcrição, sem comentários.' },
+        { inline_data: { mime_type: mimeType, data: base64Data } },
+      ] }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+    },
+    {
+      params: { key: process.env.GOOGLE_GEMINI_API_KEY },
+      headers: { 'Content-Type': 'application/json' },
+      timeout: TIMEOUT_MS,
+      maxContentLength: 8 * 1024 * 1024,
+      maxBodyLength: 8 * 1024 * 1024,
+    },
+  );
+
+  const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  if (text.length < 40) throw new Error('VIDEO_TRANSCRIPTION_EMPTY');
+  return text;
 }
 
 async function generateSummaryWithAI({ content, length = 'medium', language = 'pt-BR' }) {
@@ -285,16 +340,33 @@ async function callGeminiWithImage(imageBase64, prompt, mimeType = 'image/jpeg')
 }
 
 async function analyzeImageForFlashcards(imageBase64, subject = 'Geral', mimeType = 'image/jpeg') {
-  const prompt = `Analise esta imagem e gere flashcards de estudo de ALTA QUALIDADE.
+  const prompt = `🎓 GERE FLASHCARDS TÉCNICOS E ESPECÍFICOS A PARTIR DESTA IMAGEM
 
-Retorne SOMENTE um array JSON válido:
+Disciplina/Contexto: ${subject}
+
+REGRAS OBRIGATÓRIAS:
+✗ NUNCA: Perguntas genéricas tipo "O que é...", "Explique..."
+✗ NUNCA: Respostas superficiais ou que se aplicam a múltiplos temas
+✓ OBRIGATÓRIO: Se há números, fórmulas, valores ou critérios → INCLUA NAS RESPOSTAS
+✓ OBRIGATÓRIO: Cada pergunta deve ser específica e técnica
+✓ OBRIGATÓRIO: Perguntas aplicadas quando possível ("Como...", "Qual é...", "Quando...")
+✓ OBRIGATÓRIO: 3-7 flashcards de ALTA QUALIDADE (não quantidade, qualidade)
+
+EXEMPLOS:
+❌ PÉSSIMO: P: "O que mostra este diagrama?" R: "Mostra o ciclo de vida"
+✅ EXCELENTE: P: "Qual é a duração da fase S em células de mamífero?" R: "6-8 horas do ciclo celular total de 24 horas"
+
+Se a imagem contém:
+- EQUAÇÕES: Pergunte sobre valores numéricos, aplicações práticas, situações onde se usa
+- DIAGRAMAS: Pergunte sobre relações específicas, fluxo de energia/informação, critérios de decisão
+- GRÁFICOS: Pergunte sobre valores específicos, interpretação de dados, limites críticos
+- FÓRMULAS: Pergunte sobre quando usar, o que cada termo significa, aplicações práticas
+
+Retorne SOMENTE um array JSON válido, sem markdown:
 [
-  {"question": "pergunta concisa", "answer": "resposta completa e precisa"},
-  {"question": "pergunta 2", "answer": "resposta 2"},
-  {"question": "pergunta 3", "answer": "resposta 3"}
-]
-
-Mínimo 3, máximo 7 flashcards. Se a imagem for de equações, diagramas ou fórmulas, crie perguntas específicas sobre esses conceitos.`;
+  {"question": "Pergunta MUITO ESPECÍFICA e técnica", "answer": "Resposta com números/valores/critérios específicos"},
+  ...
+]`;
 
   try {
     const response = await callGeminiWithImage(imageBase64, prompt, mimeType);
@@ -424,6 +496,7 @@ module.exports = {
   callGemini,
   callGeminiWithImage,
   generateFlashcardsWithAI,
+  transcribeVideoWithAI,
   generateSummaryWithAI,
   generateJarvisResponse,
   generateQuizWithAI,
